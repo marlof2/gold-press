@@ -10,7 +10,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Abra http://localhost:9090. O primeiro início cria a chave da aplicação, o SQLite, as tabelas e o link `public/storage`. A chave fica persistida em `storage/app.key`, fora da pasta pública.
+A URL configurada para a VPS é http://144.91.76.180:9090. O serviço permanece restrito ao endereço local do servidor por padrão; o acesso externo depende de um proxy ou de uma alteração explícita da publicação da porta. O primeiro início cria a chave da aplicação, o SQLite, as tabelas e o link `public/storage`. A chave fica persistida em `storage/app.key`, fora da pasta pública.
 
 Personalize `GRAFICA_NOME`, `GRAFICA_ENDERECO`, `GRAFICA_TELEFONE` e `APP_URL` no `.env`. Para mudar a porta, configure `APP_PORT` e ajuste `APP_URL` para a mesma porta. Após alterar variáveis, execute `docker compose up -d`.
 
@@ -40,7 +40,7 @@ O botão abre `https://wa.me/55DDDNUMERO?text=...` com mensagem codificada por `
 
 ## Link público e publicação
 
-Em desenvolvimento, o link usa `http://localhost:9090/storage/ordens/{uuid}.docx`. **Um cliente em outro aparelho não consegue acessar o seu localhost.** Para compartilhar, hospede a aplicação em um domínio acessível (HTTPS) ou publique por um túnel e configure `APP_URL` com esse endereço. O Compose limita a porta a `127.0.0.1`; um proxy/túnel local pode encaminhar o acesso. Os arquivos são públicos a quem possuir o link, conforme solicitado; usam nomes UUID.
+Na VPS configurada, os links usam `http://144.91.76.180:9090/storage/ordens/...docx`. **Um cliente em outro aparelho não consegue acessar o seu localhost.** Para compartilhar, hospede a aplicação em um domínio acessível (HTTPS) ou publique por um túnel e configure `APP_URL` com esse endereço. O Compose mantém a porta em `127.0.0.1` por padrão. Para acesso externo, configure o encaminhamento no proxy do painel de deploy ou publique a porta explicitamente. Os arquivos são públicos a quem possuir o link, conforme solicitado; usam nomes UUID.
 
 Todas as páginas administrativas exigem login. O único documento acessível sem login é o DOCX público com nome UUID, para permitir o envio ao cliente. Ao publicar com HTTPS, defina `APP_ENV=production` e `SESSION_SECURE_COOKIE=true`. Não exponha o diretório raiz da aplicação; o Apache serve somente `public/`.
 
@@ -77,3 +77,21 @@ Altere a senha após o primeiro acesso em **Minha conta**. O login tem limite de
 A suíte cobre também autenticação, tentativas de login, alteração de senha, CRUD de clientes/status, filtros, paginação, proteção das rotas, migração de OS legadas e preservação do documento em falhas de edição.
 
 Para acessar pelo celular na mesma rede, configure `APP_BIND_ADDRESS=0.0.0.0` e `APP_URL=http://IP-DO-COMPUTADOR:9090`, recrie o serviço com `docker compose up -d` e abra esse endereço no celular. Em Docker/WSL no Windows, pode ser necessário liberar a porta no firewall e configurar o encaminhamento do WSL. Para clientes fora da rede, use o domínio HTTPS ou túnel público.
+
+## VPS 144.91.76.180
+
+Configure estas variáveis no `.env` ou no painel de deploy:
+
+```dotenv
+APP_ENV=production
+APP_URL=http://144.91.76.180:9090
+APP_PORT=9090
+APP_BIND_ADDRESS=127.0.0.1
+SESSION_SECURE_COOKIE=false
+```
+
+Mantenha as variáveis `ADMIN_*` configuradas para o primeiro acesso. Após atualizar o código ou as variáveis, refaça o deploy no painel ou execute `docker compose up -d --build`. Para o endereço público `http://144.91.76.180:9090/login` funcionar, ainda é necessário configurar o acesso externo no proxy ou na publicação da porta; o padrão atual aceita apenas conexões locais no servidor.
+
+Variáveis já definidas no painel ou no `.env` prevalecem sobre os valores padrão do Compose; substitua configurações antigas de `APP_URL`, `APP_PORT` e `APP_BIND_ADDRESS`. O servidor web escuta na porta 80 dentro do container; 9090 é a porta publicada da VPS.
+
+Para executar somente no computador local, use `APP_URL=http://localhost:9090`, `APP_BIND_ADDRESS=127.0.0.1` e `APP_ENV=local`.
