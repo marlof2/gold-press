@@ -4,14 +4,19 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreOrdemServicoRequest;
 use App\Models\Cliente;
+use App\Models\Empresa;
 use App\Models\OrdemServico;
 use App\Models\Produto;
 use App\Models\Status;
+use App\Models\User;
+use App\Services\MensagensWhatsApp;
 use App\Services\SalvarOrdemServico;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
@@ -19,28 +24,42 @@ class OrdemServicoController extends Controller
 {
     public function index(Request $request): View
     {
-        $filtros = $request->validate(['q' => ['nullable', 'string', 'max:255'], 'status_id' => ['nullable', 'integer', 'exists:statuses,id']]);
+        $filtros = $request->validate(['q' => ['nullable', 'string', 'max:255'], 'status_id' => ['nullable', 'integer', 'exists:statuses,id'], 'prazo' => ['nullable', Rule::in(['abertas', 'hoje', 'proximas', 'atrasadas'])], 'pagamento' => ['nullable', Rule::in(['pendente', 'quitado'])]]);
         $ordens = OrdemServico::with('status')->withCount('itens')->when($filtros['q'] ?? null, fn ($query, $q) => $query->where(function ($query) use ($q) {
             $query->where('nome', 'like', '%'.$q.'%')->orWhereHas('cliente', fn ($cliente) => $cliente->where('nome', 'like', '%'.$q.'%'))->orWhere('descricao', 'like', '%'.$q.'%')->orWhereHas('itens', fn ($itens) => $itens->where('descricao', 'like', '%'.$q.'%'))->orWhere('id', ltrim($q, '#0'));
         }))
-            ->when($filtros['status_id'] ?? null, fn ($query, $id) => $query->where('status_id', $id))->latest()->paginate(15)->withQueryString();
+            ->when($filtros['status_id'] ?? null, fn ($query, $id) => $query->where('status_id', $id))->prazo($filtros['prazo'] ?? null)
+            ->when($filtros['pagamento'] ?? null, function ($query, $pagamento) {
+                $operador = $pagamento === 'quitado' ? '>=' : '<';
+                $query->whereRaw('round((select coalesce(sum(valor), 0) from pagamentos where pagamentos.ordem_servico_id = ordens_servico.id and pagamentos.estornado_em is null), 2) '.$operador.' ordens_servico.valor_total_final');
+            })
+            ->when($filtros['prazo'] ?? null, fn ($query) => $query->orderBy('data_entrega'))->latest()->paginate(15)->withQueryString();
 
         return view('ordens.index', ['ordens' => $ordens, 'statuses' => Status::orderBy('posicao')->get()]);
     }
 
-    public function create(): View
+    public function create(Request $request): View
     {
-        return $this->formulario();
+        $dados = $request->validate(['cliente_id' => ['nullable', 'integer', 'exists:clientes,id'], 'repetir' => ['nullable', 'integer', 'exists:ordens_servico,id']]);
+        $origem = isset($dados['repetir']) ? OrdemServico::with('itens')->findOrFail($dados['repetir']) : null;
+        if ($origem) {
+            $origem->data_aprovacao = null;
+            $origem->data_entrega = null;
+            $origem->status_id = Status::where('slug', 'orcamento')->value('id') ?? Status::orderBy('posicao')->value('id');
+        }
+
+        return $this->formulario(origem: $origem);
     }
 
-    private function formulario(?OrdemServico $ordem = null): View
+    private function formulario(?OrdemServico $ordem = null, ?OrdemServico $origem = null): View
     {
         $ordem?->load('itens');
 
         return view('ordens.create', [
-            'ordem' => $ordem,
+            'ordem' => $ordem, 'origem' => $origem, 'empresa' => Empresa::atual(),
             'clientes' => Cliente::orderBy('nome')->get(['id', 'nome', 'telefone', 'documento', 'endereco', 'cidade', 'bairro', 'uf', 'cep']),
             'statuses' => Status::orderBy('posicao')->orderBy('nome')->get(),
+            'usuarios' => User::orderBy('name')->get(['id', 'name']),
             'produtos' => Produto::ativos()->orderBy('nome')->get(),
         ]);
     }
@@ -63,7 +82,7 @@ class OrdemServicoController extends Controller
     private function persistir(StoreOrdemServicoRequest $request, SalvarOrdemServico $servico, ?OrdemServico $ordem = null): RedirectResponse
     {
         try {
-            $ordem = $servico->salvar($request->validated(), $ordem);
+            $ordem = $servico->salvar($request->safe()->except(['acao']), $ordem);
         } catch (ValidationException $e) {
             throw $e;
         } catch (Throwable $e) {
@@ -80,6 +99,14 @@ class OrdemServicoController extends Controller
             $mensagem = 'Ordem de serviço salva. O download do DOCX começou.';
         }
 
+        if ($request->input('acao') === 'salvar_pdf') {
+            $rota = route('ordens.success', ['token' => $ordem->token, 'baixar' => 'pdf']);
+        }
+        if ($request->input('acao') === 'salvar_whatsapp') {
+            $rota = route('ordens.success', ['token' => $ordem->token, 'whatsapp' => 1]);
+            $mensagem = 'OS salva. Confira a mensagem abaixo e abra o WhatsApp para enviar.';
+        }
+
         return redirect()->to($rota)->with('success', $mensagem);
     }
 
@@ -94,17 +121,52 @@ class OrdemServicoController extends Controller
         return redirect()->route('ordens.index')->with('success', 'Ordem de serviço excluída.');
     }
 
-    public function success(string $token): View
+    public function atualizarStatus(Request $request, OrdemServico $ordem, SalvarOrdemServico $servico): RedirectResponse|JsonResponse
     {
-        $ordem = OrdemServico::with('status', 'cliente', 'itens')->where('token', $token)->firstOrFail();
-        $url = Storage::disk('public')->url($ordem->arquivo_path);
-        $telefone = preg_replace('/\D/', '', $ordem->telefone);
-        if (in_array(strlen($telefone), [10, 11])) {
-            $telefone = '55'.$telefone;
-        }
-        $texto = 'Olá, '.$ordem->nome.'! Segue sua OS #'.str_pad((string) $ordem->id, 6, '0', STR_PAD_LEFT).'. Valor final: R$ '.number_format((float) $ordem->valor_total_final, 2, ',', '.').'. Baixe o documento: '.$url;
-        $whatsappUrl = 'https://wa.me/'.$telefone.'?text='.rawurlencode($texto);
+        $dados = $request->validate(['status_id' => ['required', 'integer', 'exists:statuses,id']]);
+        try {
+            $servico->alterarStatus($ordem, Status::findOrFail($dados['status_id']));
+        } catch (Throwable $erro) {
+            report($erro);
 
-        return view('ordens.success', compact('ordem', 'url', 'whatsappUrl'));
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Não foi possível atualizar o status. Tente novamente.'], 500);
+            }
+
+            return back()->withErrors(['status_id' => 'Não foi possível atualizar o status. Tente novamente.']);
+        }
+
+        if ($request->expectsJson()) {
+            $request->session()->flash('success', 'Status da OS atualizado.');
+
+            return response()->json(['message' => 'Status da OS atualizado.']);
+        }
+
+        return back()->with('success', 'Status da OS atualizado.');
+    }
+
+    public function success(string $token, MensagensWhatsApp $mensagens): View
+    {
+        $ordem = OrdemServico::with('status', 'cliente', 'itens', 'pagamentos.usuario')->where('token', $token)->firstOrFail();
+
+        return view('ordens.success', $this->dadosDetalhes($ordem, $mensagens));
+    }
+
+    public function acao(OrdemServico $ordem, string $acao, MensagensWhatsApp $mensagens): View
+    {
+        return view('ordens.acao', [...$this->dadosDetalhes($ordem, $mensagens), 'acao' => $acao]);
+    }
+
+    private function dadosDetalhes(OrdemServico $ordem, MensagensWhatsApp $mensagens): array
+    {
+        $ordem->loadMissing('status', 'cliente', 'itens', 'pagamentos.usuario');
+        $url = route('documentos.show', ['token' => $ordem->token, 'formato' => 'docx']);
+        $pdfUrl = route('documentos.show', ['token' => $ordem->token, 'formato' => 'pdf']);
+        $modelosWhatsApp = $mensagens->modelos($ordem);
+        $whatsappUrl = $mensagens->url($ordem->telefone, $modelosWhatsApp['pedido']);
+        $telefoneWhatsApp = $mensagens->telefone($ordem->telefone);
+        $statuses = Status::orderBy('posicao')->get();
+
+        return compact('ordem', 'url', 'pdfUrl', 'whatsappUrl', 'modelosWhatsApp', 'telefoneWhatsApp', 'statuses');
     }
 }

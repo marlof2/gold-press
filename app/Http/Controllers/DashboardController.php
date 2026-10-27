@@ -11,10 +11,12 @@ class DashboardController extends Controller
 {
     public function __invoke(): View
     {
-        $abertas = OrdemServico::whereHas('status', fn ($q) => $q->where('finalizado', false));
+        $abertas = OrdemServico::abertas();
 
         return view('dashboard', [
             'totalOrdens' => OrdemServico::count(), 'totalClientes' => Cliente::count(), 'abertas' => (clone $abertas)->count(),
+            'hoje' => (clone $abertas)->prazo('hoje')->count(), 'proximas' => (clone $abertas)->prazo('proximas')->count(),
+            'entregas' => (clone $abertas)->with('status')->whereNotNull('data_entrega')->whereDate('data_entrega', '<=', today()->addDays(7))->orderBy('data_entrega')->take(6)->get(),
             'atrasadas' => (clone $abertas)->whereDate('data_entrega', '<', today())->count(),
             'valorMes' => OrdemServico::whereBetween('created_at', [now()->startOfMonth(), now()->endOfMonth()])->sum('valor_total_final'),
             'ordens' => OrdemServico::with('status')->latest()->take(6)->get(),

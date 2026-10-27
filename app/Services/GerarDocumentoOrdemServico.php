@@ -199,7 +199,7 @@ class GerarDocumentoOrdemServico
         $table = $section->addTable(['borderSize' => 0, 'cellMargin' => self::MARGEM_CELULA]);
         $borda = ['borderBottomSize' => 8, 'borderBottomColor' => '000000', 'borderBottomStyle' => 'single'];
         $linhasEsquerda = [
-            'Responsavel' => $ordem->responsavel,
+            'Responsável da gráfica' => $ordem->responsavel,
             'Situação Atual' => $ordem->status?->nome,
             'Datas' => 'Aprovação: '.($ordem->data_aprovacao?->format('d/m/Y') ?? '/ /').'    Entrega: '.($ordem->data_entrega?->format('d/m/Y') ?? '/ /'),
             'Condições de Pagamento' => $ordem->condicoes_pagamento,

@@ -163,3 +163,90 @@
 .osf-spinner{animation:none}
 .osf-toast{animation:none}
 }
+
+/* Atalhos de atendimento e produção */
+[hidden]{display:none!important}
+.osf-links{align-items:center}
+.osf-links .text-button{padding:4px 0;gap:6px}
+.osf-more-actions{position:relative}
+.osf-more-actions summary{list-style:none;cursor:pointer}
+.osf-more-actions summary::-webkit-details-marker{display:none}
+.osf-more-menu{position:absolute;bottom:calc(100% + 10px);right:0;min-width:230px;display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid var(--line);border-radius:8px;background:#fff;box-shadow:0 8px 30px #233b3026;z-index:45}
+.osf-more-menu .text-button{justify-content:flex-start;gap:8px;white-space:nowrap}
+.osf-more-menu .text-link{padding:10px}
+
+
+
+.osf-dialog{width:min(760px,calc(100vw - 32px));max-height:calc(100dvh - 40px);padding:24px;border:1px solid var(--line);border-radius:12px;color:var(--ink);box-shadow:0 24px 80px #233b3033}
+.osf-dialog::backdrop{background:#17281fd0;backdrop-filter:blur(3px)}
+.osf-dialog .osf-card-head{justify-content:space-between}
+.osf-dialog .form-actions{margin-top:20px;padding-top:20px}
+.osf-payment-summary{margin-top:16px;padding-top:14px;border-top:1px solid var(--line);font-size:12px}
+.osf-payment-summary p{display:flex;justify-content:space-between;gap:12px}
+.osf-payment-summary .osf-field{margin-bottom:12px}
+.osf-payment-totals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin:0 0 22px;padding:16px;background:var(--green-light);border-radius:8px}
+.osf-payment-totals>div{display:flex;flex-direction:column;gap:6px;min-width:0}
+.osf-payment-totals span{font-size:10px;color:#65715f}
+.osf-payment-totals strong{font-size:16px;overflow-wrap:anywhere}
+.osf-payment-history{margin-top:22px;border-top:1px solid var(--line);padding-top:18px}
+.osf-payment-history h3{font-size:13px}
+.osf-payment-history article{display:flex;justify-content:space-between;gap:16px;padding:14px 0;border-bottom:1px solid var(--line);font-size:12px}
+.osf-payment-history p{font-size:11px;margin:6px 0}
+.osf-payment-history details{max-width:190px}
+.osf-payment-history summary{cursor:pointer}
+.osf-align-end{align-self:end;min-height:44px}
+.osf-paid-note{display:flex;gap:8px;align-items:center;color:#39734c;font-size:12px}
+.osf-status-card{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.osf-status-card h2{margin:6px 0 0}
+.osf-status-form,.osf-inline-status{display:flex;align-items:center;gap:6px}
+.osf-status-form select{min-width:150px}
+.osf-inline-status{margin-top:8px}
+.osf-inline-status select{min-height:34px;font-size:11px;max-width:150px;padding:6px}
+.osf-inline-status .icon-button{width:34px;height:34px;min-height:34px;border:1px solid var(--line);border-radius:4px}
+.osf-message-field{margin-top:14px}
+.osf-message-field textarea{font-size:12px;line-height:1.7}
+.osf-message-actions{display:flex;flex-wrap:wrap;gap:10px;margin:16px 0 10px}
+.osf-delivery-shortcuts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:24px}
+.osf-delivery-shortcuts>a{display:flex;align-items:center;gap:10px;padding:18px;background:#fff;border:1px solid var(--line);border-radius:8px;color:var(--green);font-size:12px}
+.osf-delivery-shortcuts strong,.osf-delivery-shortcuts>a>.icon:last-child{margin-left:auto}
+#whatsapp,#pagamentos{scroll-margin-top:24px}
+@media(max-width:1199px){.osf-actionbar-buttons{flex-wrap:nowrap}}
+@media(max-width:767px){.osf-delivery-shortcuts{grid-template-columns:1fr;gap:10px}.osf-status-card{align-items:stretch;flex-direction:column}.osf-status-form select{min-width:0;flex:1}.osf-payment-history article{flex-direction:column}.osf-payment-totals{gap:10px;padding:12px}.osf-payment-totals strong{font-size:13px}.osf-actionbar{bottom:66px}.osf-form{padding-bottom:240px}}
+@media(max-width:640px){.osf-actionbar-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}.osf-actionbar-buttons>.osf-more-actions{grid-column:1/-1}.osf-actionbar-buttons>.button{padding:10px 8px;font-size:11px;min-height:44px;gap:6px}.osf-more-actions>summary{width:100%;min-height:36px;padding:6px;font-size:11px}.osf-more-menu{left:0;right:0}.osf-dialog{padding:18px}.osf-message-actions>.button{width:100%}.osf-status-form{flex-wrap:wrap}.osf-status-form .button{flex:1}.osf-paid-note{line-height:1.6}.osf-delivery-shortcuts>a{padding:14px}.osf-payment-totals{grid-template-columns:1fr}.osf-payment-totals>div{flex-direction:row;justify-content:space-between;align-items:center}.osf-card-head>div{min-width:0}}
+@media(max-width:767px){.osf-field :is(input,select,textarea),.osf-inline-status select{font-size:16px}.osf-card-head h2{line-height:1.4}.osf-links .text-button{min-height:40px}}
+
+/* Seleção e pesquisa de clientes no mesmo controle */
+.osf-combobox{position:relative;min-width:0}
+.osf-combobox-control{position:relative}
+.osf-combobox .osf-combobox-input{padding-right:72px}
+.osf-combobox-clear,.osf-combobox-toggle{position:absolute;top:50%;transform:translateY(-50%);width:30px;height:36px;min-height:36px;border:0;border-radius:4px;background:transparent;color:#65715f;font-size:20px;display:grid;place-items:center;cursor:pointer;padding:0}
+.osf-combobox-toggle{right:5px}.osf-combobox-clear{right:35px}
+.osf-combobox-clear:hover,.osf-combobox-toggle:hover{background:var(--green-light);color:var(--green)}
+.osf-combobox-options{position:absolute;top:calc(100% + 6px);left:0;right:0;z-index:45;max-height:280px;overflow-y:auto;overscroll-behavior:contain;margin:0;padding:5px;list-style:none;border:1px solid #cbd5c4;border-radius:8px;background:#fff;box-shadow:0 10px 28px #233b3026}
+.osf-combobox-options [role=option]{display:flex;flex-direction:column;gap:5px;padding:11px 12px;border-radius:5px;cursor:pointer;min-height:52px;overflow-wrap:anywhere}
+.osf-combobox-options [role=option] strong{font-size:13px;font-weight:600;color:var(--ink)}
+.osf-combobox-options [role=option] small{font-size:11px;color:#65715f}
+.osf-combobox-options [role=option][aria-selected=true]{background:var(--green-light)}
+.osf-combobox-empty{padding:12px;font-size:12px;line-height:1.6;color:#65715f}
+.osf-order-meta{display:flex;flex-wrap:wrap;gap:16px 40px;margin:0 0 18px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.osf-order-meta dt{font-size:10px;color:#65715f;margin-bottom:6px}.osf-order-meta dd{margin:0;font-size:15px;font-weight:600;color:var(--green)}
+@media(max-width:767px){.osf-combobox-options [role=option] strong{font-size:15px}.osf-combobox-options{max-height:240px}}
+
+/* Ações pontuais das ordens */
+.osf-order-actions-button{gap:12px;min-height:36px}
+.osf-order-menu{display:none;position:fixed;inset:auto;margin:0;width:230px;max-width:calc(100vw - 24px);overflow-y:auto;overscroll-behavior:contain;padding:7px;border:1px solid var(--line);border-radius:9px;background:#fff;color:var(--ink);box-shadow:0 12px 36px #233b3030}
+.osf-order-menu:popover-open{display:flex;flex-direction:column;gap:2px}
+.osf-order-menu>a,.osf-order-menu>form>button{display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:10px 12px;border:0;border-radius:5px;background:transparent;text-align:left;font-size:12px;color:var(--ink);text-decoration:none;cursor:pointer}
+.osf-order-menu>a:hover,.osf-order-menu>form>button:hover{background:var(--green-light)}
+.osf-order-menu .danger{color:#a14637}
+.osf-order-menu .icon{width:16px;height:16px;flex-shrink:0}
+.osf-menu-divider{border-top:1px solid var(--line);margin:4px 5px}
+.osf-action-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:20px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.osf-action-heading h2{font-size:20px;margin:7px 0 0}.osf-action-heading small{font-size:11px;color:#65715f;overflow-wrap:anywhere}
+.osf-action-dialog .osf-action-panel>.card{border:0;padding:0;margin:0;box-shadow:none}
+.osf-action-dialog .osf-card-head{margin-bottom:16px}
+.osf-action-dialog{scrollbar-gutter:stable}
+.osf-summary-action{display:flex;align-items:center;gap:8px;padding:12px 0 0;margin-top:10px;font-size:11px;color:var(--green)}
+@media(max-width:767px){.osf-order-menu>a,.osf-order-menu>form>button{font-size:14px;min-height:44px}.osf-action-dialog{width:calc(100vw - 24px);max-height:calc(100dvh - 24px)}.osf-action-heading h2{font-size:18px}.heading-actions{width:100%}.heading-actions>.button{flex:1}}
+
+.osf-map-link{display:flex;width:fit-content;margin-top:8px;gap:6px}

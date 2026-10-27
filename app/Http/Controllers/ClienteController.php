@@ -28,9 +28,13 @@ class ClienteController extends Controller
         return view('clientes.form', ['cliente' => new Cliente]);
     }
 
-    public function store(ClienteRequest $request): RedirectResponse
+    public function store(ClienteRequest $request): RedirectResponse|JsonResponse
     {
         $cliente = Cliente::create($request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json($cliente->only(['id', ...Cliente::DADOS_OS, 'email']), 201);
+        }
 
         return redirect()->route('clientes.show', $cliente)->with('success', 'Cliente cadastrado.');
     }

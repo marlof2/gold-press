@@ -1,4 +1,5 @@
 (() => {
+ try { Object.keys(localStorage).filter(key=>key.startsWith('gold-press:rascunho:')).forEach(key=>localStorage.removeItem(key)); } catch {}
  const sidebar=document.getElementById('sidebar'), toggle=document.getElementById('menu-toggle'), backdrop=document.getElementById('sidebar-backdrop');
  const closeButton=document.getElementById('sidebar-close');
  function menu(open) {

@@ -71,6 +71,9 @@ class UserController extends Controller
         if (User::count() <= 1) {
             return back()->withErrors(['usuario' => 'Mantenha pelo menos um usuário cadastrado.']);
         }
+        if ($usuario->isAdmin() && User::whereHas('perfil', fn ($query) => $query->where('slug', Perfil::ADMIN))->count() <= 1) {
+            return back()->withErrors(['usuario' => 'Mantenha pelo menos um administrador no sistema.']);
+        }
         $usuario->delete();
 
         return redirect()->route('usuarios.index')->with('success', 'Usuário excluído.');

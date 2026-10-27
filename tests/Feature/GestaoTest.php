@@ -23,7 +23,7 @@ class GestaoTest extends TestCase
 
     private function entrar(): User
     {
-        $user = User::factory()->create();
+        $user = User::factory()->admin()->create();
         $this->actingAs($user);
 
         return $user;

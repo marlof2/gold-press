@@ -31,7 +31,10 @@ class StoreOrdemServicoRequest extends FormRequest
             $this->merge(['uf' => strtoupper((string) $this->input('uf'))]);
         }
 
-        foreach (['desconto'] as $campo) {
+        foreach (['desconto', 'sinal'] as $campo) {
+            if ($campo === 'sinal' && ! $this->has('sinal')) {
+                continue;
+            }
             $this->merge([$campo => $this->normalizarValor($this->input($campo))]);
         }
 
@@ -49,6 +52,7 @@ class StoreOrdemServicoRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'acao' => ['nullable', 'string', Rule::in(['salvar', 'salvar_pdf', 'salvar_docx', 'salvar_whatsapp'])],
             'cliente_id' => ['required', 'integer', 'exists:clientes,id'],
             'status_id' => ['required', 'integer', 'exists:statuses,id'],
             'nome' => ['required', 'string', 'max:255'],
@@ -60,10 +64,11 @@ class StoreOrdemServicoRequest extends FormRequest
             'bairro' => ['nullable', 'string', 'max:255'],
             'uf' => ['nullable', 'regex:/^[A-Za-z]{2}$/'],
             'cep' => ['nullable', 'string', 'max:10'],
-            'responsavel' => ['nullable', 'string', 'max:255'],
+            'responsavel_id' => ['nullable', 'integer', 'exists:users,id'],
             'condicoes_pagamento' => ['nullable', 'string', 'max:255'],
             'data_aprovacao' => ['nullable', 'date_format:Y-m-d'],
             'data_entrega' => ['nullable', 'date_format:Y-m-d', Rule::when($this->filled('data_aprovacao'), 'after_or_equal:data_aprovacao')],
+            'sinal' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:1000000', Rule::prohibitedIf($this->route('ordem') !== null)],
             'desconto' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:1000000'],
             'observacoes' => ['nullable', 'string', 'max:10000'],
             'servico_realizado' => ['nullable', 'string', 'max:10000'],
@@ -113,6 +118,7 @@ class StoreOrdemServicoRequest extends FormRequest
     {
         return [
             'nome' => 'nome do cliente',
+            'responsavel_id' => 'responsável da gráfica',
             'telefone' => 'telefone com DDD',
             'itens' => 'itens da OS',
             'itens.*.descricao' => 'descrição do item',

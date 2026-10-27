@@ -2,9 +2,12 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Perfil;
+use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UserRequest extends FormRequest
 {
@@ -31,5 +34,15 @@ class UserRequest extends FormRequest
             'perfil_id' => ['required', 'integer', 'exists:perfis,id'],
             'password' => [$usuario ? 'nullable' : 'required', 'string', 'confirmed'],
         ];
+    }
+
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            $usuario = $this->route('usuario');
+            if ($usuario?->isAdmin() && ! Perfil::find($this->integer('perfil_id'))?->isAdmin() && User::whereHas('perfil', fn ($query) => $query->where('slug', Perfil::ADMIN))->count() <= 1) {
+                $validator->errors()->add('perfil_id', 'Mantenha pelo menos um administrador no sistema.');
+            }
+        }];
     }
 }

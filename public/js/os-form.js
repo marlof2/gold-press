@@ -25,8 +25,6 @@
 
     let proximoIndice = 0;
     let sujo = false;
-    let clienteRequest;
-    let cepRequest;
 
     container.querySelectorAll('[data-item]').forEach((row) => {
         proximoIndice = Math.max(proximoIndice, Number(row.dataset.index || 0) + 1);
@@ -193,8 +191,10 @@
         texto('[data-resumo-subtotal]', money.format(subtotal));
         texto('[data-resumo-total]', money.format(total));
         texto('[data-resumo-total-mobile]', money.format(total));
+        const recebido = numero(document.getElementById('sinal')?.value) + Number(document.querySelector('[data-valor-pago]')?.dataset.valorPago || 0);
+        texto('[data-resumo-saldo]', money.format(Math.max(0, total - recebido)));
 
-        const invalido = produtos < 0 || total < 0;
+        const invalido = produtos < 0 || total < 0 || total < recebido;
         const erro = document.querySelector('[data-resumo-erro]');
         if (erro) erro.hidden = !invalido;
         document.querySelectorAll('[data-submit]').forEach((botao) => {
@@ -297,108 +297,47 @@
 
     const cliente = document.getElementById('cliente_id');
     const clienteFeedback = document.getElementById('cliente-feedback');
-    const usarEndereco = document.getElementById('usar-endereco-cliente');
 
-    function preencherCliente(dados) {
+    function preencherCliente(dados, preencherEndereco = true) {
         const telefone = document.getElementById('cliente-telefone');
         const documento = document.getElementById('cliente-documento');
-        if (telefone) telefone.textContent = dados.telefone || '';
+        if (telefone) telefone.textContent = dados.telefone ? M.maskTelefone(dados.telefone) : '';
         if (documento) documento.textContent = dados.documento || '';
-        if (usarEndereco?.checked) {
+        if (preencherEndereco) {
             valorDe('endereco', dados.endereco);
             valorDe('bairro', dados.bairro);
             valorDe('cidade', dados.cidade);
             valorDe('uf', dados.uf);
             valorDe('cep', dados.cep ? M.maskCep(dados.cep) : '');
+            valorDe('numero_endereco', '');
         }
+        form.dispatchEvent(new CustomEvent('gp:cliente', { detail: dados }));
     }
 
-    async function carregarCliente() {
-        if (!cliente?.value) {
-            preencherCliente({});
-            return;
-        }
-        clienteRequest?.abort();
-        clienteRequest = new AbortController();
-        if (clienteFeedback) clienteFeedback.textContent = '';
+    function carregarCliente(preservarEndereco = false) {
         try {
-            const resposta = await fetch(`${cliente.dataset.url}/${cliente.value}/dados`, { signal: clienteRequest.signal, headers: { Accept: 'application/json' } });
-            if (!resposta.ok) throw new Error('Falha');
-            preencherCliente(await resposta.json());
-            if (clienteFeedback) {
-                clienteFeedback.textContent = '';
-                clienteFeedback.className = 'osf-help';
-            }
-        } catch (erro) {
-            if (erro.name !== 'AbortError' && clienteFeedback) {
-                clienteFeedback.textContent = 'Não foi possível carregar os dados do cliente.';
-                clienteFeedback.className = 'osf-help osf-help-error';
-            }
+            const dados = JSON.parse(cliente?.selectedOptions[0]?.dataset.cliente || '{}');
+            preencherCliente(dados, !preservarEndereco);
+            if (clienteFeedback) clienteFeedback.textContent = '';
+        } catch {
+            if (clienteFeedback) clienteFeedback.textContent = 'Selecione novamente o cliente.';
         }
     }
 
-    cliente?.addEventListener('change', carregarCliente);
-    if (cliente?.value && !document.getElementById('cliente-telefone')?.textContent.trim()) {
-        carregarCliente();
-    }
-
-    const cep = document.getElementById('cep');
-    const cepSpinner = document.querySelector('[data-cep-spinner]');
-    const cepFeedback = document.querySelector('[data-cep-feedback]');
-
-    async function buscarCep() {
-        if (!cep) return;
-        const digitos = M.onlyDigits(cep.value);
-        if (digitos.length !== 8 || cep.dataset.ultimoCep === digitos) return;
-
-        cep.dataset.ultimoCep = digitos;
-        cepRequest?.abort();
-        const requisicao = new AbortController();
-        cepRequest = requisicao;
-        const temporizador = window.setTimeout(() => requisicao.abort(), 8000);
-
-        if (cepSpinner) cepSpinner.hidden = false;
-        cep.setAttribute('aria-busy', 'true');
-        if (cepFeedback) {
-            cepFeedback.textContent = 'Buscando endereço...';
-            cepFeedback.className = 'osf-help';
-        }
-
-        try {
-            const resposta = await fetch(`https://viacep.com.br/ws/${digitos}/json/`, { signal: requisicao.signal });
-            if (!resposta.ok) throw new Error('Falha');
-            const dados = await resposta.json();
-            if (dados.erro) throw new Error('Não encontrado');
-            valorDe('endereco', dados.logradouro);
-            valorDe('bairro', dados.bairro);
-            valorDe('cidade', dados.localidade);
-            valorDe('uf', dados.uf);
-            if (cepFeedback) {
-                cepFeedback.textContent = 'Endereço preenchido pelo CEP.';
-                cepFeedback.className = 'osf-help osf-help-success';
-            }
-            document.getElementById('numero_endereco')?.focus();
-        } catch (erro) {
-            if (M.onlyDigits(cep.value) !== digitos) return;
-            delete cep.dataset.ultimoCep;
-            if (cepFeedback) {
-                cepFeedback.textContent = 'CEP não encontrado. Preencha o endereço manualmente.';
-                cepFeedback.className = 'osf-help osf-help-error';
-            }
-        } finally {
-            window.clearTimeout(temporizador);
-            if (cepRequest === requisicao) {
-                if (cepSpinner) cepSpinner.hidden = true;
-                cep.removeAttribute('aria-busy');
-            }
-        }
-    }
-
-    cep?.addEventListener('blur', buscarCep);
-    cep?.addEventListener('input', () => {
-        if (M.onlyDigits(cep.value).length === 8) buscarCep();
+    document.querySelector('[data-endereco-limpar]')?.addEventListener('click', () => {
+        ['cep', 'endereco', 'numero_endereco', 'bairro', 'cidade', 'uf'].forEach((id) => {
+            const campo = document.getElementById(id);
+            if (!campo) return;
+            campo.value = '';
+            campo.classList.remove('is-valid', 'is-invalid');
+            campo.removeAttribute('aria-invalid');
+            campo.dispatchEvent(new Event('input', { bubbles: true }));
+        });
+        document.getElementById('cep')?.focus();
     });
 
+    cliente?.addEventListener('change', () => carregarCliente());
+    carregarCliente(form.dataset.preservarEndereco === '1');
     document.querySelectorAll('[data-ajuste]').forEach((campo) => campo.addEventListener('input', calcular));
     form.querySelectorAll('input, select, textarea').forEach(validarCampo);
     document.querySelectorAll('[data-item-adicionar]').forEach((botao) => botao.addEventListener('click', adicionarItem));
@@ -410,7 +349,10 @@
     form.addEventListener('input', () => {
         sujo = true;
     });
-    form.addEventListener('submit', () => {
+    let enviando = false;
+    form.addEventListener('submit', (evento) => {
+        if (enviando) { evento.preventDefault(); return; }
+        enviando = true;
         sujo = false;
         document.querySelectorAll('[data-submit]').forEach((botao) => {
             botao.classList.add('is-loading');

@@ -19,7 +19,7 @@ class OrdemServicoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->actingAs(User::factory()->create());
+        $this->actingAs(User::factory()->admin()->create());
     }
 
     /**
@@ -98,14 +98,14 @@ class OrdemServicoTest extends TestCase
         $this->assertNotFalse(simplexml_load_string($xml));
 
         $this->get(route('ordens.success', $os->token))->assertOk()
-            ->assertSee('https://wa.me/5511999991234?text=', false)
-            ->assertSee(rawurlencode('https://grafica.example/storage/'.$os->arquivo_path), false)
-            ->assertSee('Enviar WhatsApp')
             ->assertSee('Itens da OS')
-            ->assertSee('Qtd. unitários')
-            ->assertSee('Qtd. m²')
             ->assertSee('Desconto')
+            ->assertSee('data-os-acao', false)
             ->assertDontSee('Quantidade total');
+        $this->get(route('ordens.acao', [$os, 'whatsapp']))->assertOk()
+            ->assertSee('https://wa.me/5511999991234?text=', false)
+            ->assertSee(rawurlencode(route('documentos.show', ['token' => $os->token, 'formato' => 'pdf'])), false)
+            ->assertSee('Mensagem pronta para envio');
     }
 
     public function test_aceita_desconto_acima_de_nove_reais(): void
@@ -142,7 +142,7 @@ class OrdemServicoTest extends TestCase
         Cliente::findOrFail($dados['cliente_id'])->update(['telefone' => '5511999991234']);
         $this->post('/ordens', [...$dados, 'data_aprovacao' => null, 'data_entrega' => '2026-12-20'])->assertSessionHasNoErrors();
         $os = OrdemServico::firstOrFail();
-        $this->get(route('ordens.success', $os->token))->assertSee('https://wa.me/5511999991234?text=', false);
+        $this->get(route('ordens.acao', [$os, 'whatsapp']))->assertOk()->assertSee('https://wa.me/5511999991234?text=', false);
     }
 
     public function test_salvar_e_baixar_word_redireciona_com_download(): void
@@ -150,7 +150,7 @@ class OrdemServicoTest extends TestCase
         Storage::fake('public');
         $this->post('/ordens', [...$this->dados(), 'acao' => 'salvar_docx'])->assertSessionHasNoErrors();
         $os = OrdemServico::firstOrFail();
-        $this->get(route('ordens.success', ['token' => $os->token, 'baixar' => 1]))->assertOk()->assertSee('baixar-docx');
+        $this->get(route('ordens.success', ['token' => $os->token, 'baixar' => 1]))->assertOk()->assertSee('download-os');
     }
 
     public function test_falha_no_documento_desfaz_os_e_remove_arquivo(): void
