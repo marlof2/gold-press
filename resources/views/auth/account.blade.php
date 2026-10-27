@@ -1,0 +1,6 @@
+@extends('layout')
+@section('title','Minha conta')
+@section('content')
+<div class="page-heading"><div><span class="eyebrow">SEU ACESSO</span><h1>Minha conta</h1><p>Mantenha sua senha segura e atualizada.</p></div></div>
+<div class="two-column"><section class="card"><h2>Dados de acesso</h2><dl class="details-list"><div><dt>Nome</dt><dd>{{ auth()->user()->name }}</dd></div><div><dt>E-mail</dt><dd>{{ auth()->user()->email }}</dd></div></dl></section><section class="card"><h2>Alterar senha</h2><form method="POST" action="{{ route('account.password') }}" class="stack-form">@csrf @method('PUT')<label for="current_password">Senha atual<input id="current_password" name="current_password" type="password" autocomplete="current-password" required></label><label for="password">Nova senha<input id="password" name="password" type="password" minlength="12" autocomplete="new-password" required><small>Use pelo menos 12 caracteres, com letras e números.</small></label><label for="password_confirmation">Confirme a nova senha<input id="password_confirmation" name="password_confirmation" type="password" minlength="12" autocomplete="new-password" required></label><button type="submit">Salvar nova senha</button></form></section></div>
+@endsection
