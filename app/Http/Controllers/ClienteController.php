@@ -33,7 +33,7 @@ class ClienteController extends Controller
         $cliente = Cliente::create($request->validated());
 
         if ($request->expectsJson()) {
-            return response()->json($cliente->only(['id', ...Cliente::DADOS_OS, 'email']), 201);
+            return response()->json($cliente->only(['id', ...Cliente::DADOS_OS, 'email', 'observacoes']), 201);
         }
 
         return redirect()->route('clientes.show', $cliente)->with('success', 'Cliente cadastrado.');
@@ -44,14 +44,22 @@ class ClienteController extends Controller
         return view('clientes.show', ['cliente' => $cliente, 'ordens' => $cliente->ordens()->with('status')->latest()->paginate(10)]);
     }
 
-    public function edit(Cliente $cliente): View
+    public function edit(Request $request, Cliente $cliente): View|JsonResponse
     {
+        if ($request->expectsJson()) {
+            return response()->json($cliente->only(['id', ...Cliente::DADOS_OS, 'email', 'observacoes']));
+        }
+
         return view('clientes.form', compact('cliente'));
     }
 
-    public function update(ClienteRequest $request, Cliente $cliente): RedirectResponse
+    public function update(ClienteRequest $request, Cliente $cliente): RedirectResponse|JsonResponse
     {
         $cliente->update($request->validated());
+
+        if ($request->expectsJson()) {
+            return response()->json($cliente->only(['id', ...Cliente::DADOS_OS, 'email', 'observacoes']));
+        }
 
         return redirect()->route('clientes.show', $cliente)->with('success', 'Cliente atualizado. Os dados históricos das OS foram preservados.');
     }

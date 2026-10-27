@@ -1,9 +1,10 @@
 <dialog id="cliente-rapido" class="osf-dialog" aria-labelledby="cliente-rapido-titulo">
 <form method="POST" action="{{ route('clientes.store') }}" id="cliente-rapido-form">
 @csrf
-<div class="osf-card-head"><div><h2 id="cliente-rapido-titulo">Cadastrar cliente</h2><p>O cliente será selecionado nesta OS ao salvar.</p></div><button class="icon-button" type="button" data-cliente-fechar aria-label="Fechar cadastro"><x-icon name="close"/></button></div>
+<div class="osf-card-head"><div><h2 id="cliente-rapido-titulo">Cadastrar cliente</h2><p data-cliente-descricao>O cliente será selecionado nesta OS ao salvar.</p></div><button class="icon-button" type="button" data-cliente-fechar aria-label="Fechar cadastro"><x-icon name="close"/></button></div>
 <div class="notice notice-error" data-cliente-erros role="alert" hidden></div>
-<div class="osf-grid osf-grid-3">
+<p class="osf-help" data-cliente-carregando role="status" hidden>Carregando cadastro…</p>
+<fieldset class="osf-dialog-fields" data-cliente-campos><div class="osf-grid osf-grid-3">
 <div class="osf-field osf-span-3"><label for="rapido-nome">Nome / razão social *</label><input id="rapido-nome" name="nome" maxlength="255" required autocomplete="name"></div>
 <div class="osf-field"><label for="rapido-documento">CPF / CNPJ</label><input id="rapido-documento" name="documento" data-mask="cpf-cnpj" maxlength="18" inputmode="numeric"></div>
 <div class="osf-field"><label for="rapido-telefone">WhatsApp com DDD *</label><input id="rapido-telefone" name="telefone" type="tel" data-mask="telefone" maxlength="20" required autocomplete="tel"></div>
@@ -14,6 +15,7 @@
 <div class="osf-field osf-span-2"><label for="rapido-bairro">Bairro</label><input id="rapido-bairro" name="bairro" maxlength="255"></div>
 <div class="osf-field osf-span-2"><label for="rapido-cidade">Cidade</label><input id="rapido-cidade" name="cidade" maxlength="255" autocomplete="address-level2"></div>
 <div class="osf-field"><label for="rapido-uf">UF</label><select id="rapido-uf" name="uf"><option value="">—</option>@foreach(config('ufs') as $sigla => $nome)<option value="{{ $sigla }}">{{ $sigla }}</option>@endforeach</select></div>
-</div>
-<div class="form-actions"><button class="button button-secondary fit" type="button" data-cliente-fechar>Cancelar</button><button class="button fit" type="submit">Cadastrar e selecionar <x-icon name="check"/></button></div>
+<div class="osf-field osf-span-3"><label for="rapido-observacoes">Observações</label><textarea id="rapido-observacoes" name="observacoes" rows="2" maxlength="10000"></textarea></div>
+</div></fieldset>
+<div class="form-actions"><button class="button button-secondary fit" type="button" data-cliente-fechar>Cancelar</button><button class="button fit" type="submit"><span data-cliente-submit-text>Cadastrar e selecionar</span> <x-icon name="check"/></button></div>
 </form></dialog>

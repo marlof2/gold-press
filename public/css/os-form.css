@@ -255,3 +255,6 @@
 .osf-client-contact>div{display:flex;flex-direction:column;gap:5px;min-width:0}
 .osf-client-contact dt{order:2;font-size:10px;font-weight:600;color:#65715f;padding-left:10px}
 .osf-client-contact dd{order:1;align-self:flex-start;margin:0;padding:7px 10px;border-radius:999px;background:var(--green-light);color:#3f5a45;font-size:12px;font-weight:600;white-space:nowrap}
+
+.osf-dialog-fields{border:0;padding:0;margin:0;min-width:0}
+.osf-dialog-fields:disabled{opacity:.6}

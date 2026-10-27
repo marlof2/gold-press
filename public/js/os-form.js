@@ -338,7 +338,7 @@
         document.getElementById('cep')?.focus();
     });
 
-    cliente?.addEventListener('change', () => carregarCliente());
+    cliente?.addEventListener('change', (evento) => carregarCliente(evento.detail?.preservarEndereco === true));
     carregarCliente(form.dataset.preservarEndereco === '1');
     document.querySelectorAll('[data-ajuste]').forEach((campo) => campo.addEventListener('input', calcular));
     form.querySelectorAll('input, select, textarea').forEach(validarCampo);
