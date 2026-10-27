@@ -26,18 +26,25 @@ class AuthController extends Controller
         if (RateLimiter::tooManyAttempts($key, 5)) {
             throw ValidationException::withMessages(['email' => 'Muitas tentativas. Aguarde '.RateLimiter::availableIn($key).' segundos.']);
         }
-        if (! Auth::attempt($dados, $request->boolean('remember'))) {
+        if (! Auth::attempt($dados)) {
             RateLimiter::hit($key, 60);
             throw ValidationException::withMessages(['email' => 'E-mail ou senha incorretos.']);
         }
         RateLimiter::clear($key);
         $request->session()->regenerate();
+        $token = Str::random(64);
+        $request->session()->put('single_session', $token);
+        $request->user()->forceFill([
+            'session_token' => $token,
+            'last_login_at' => now(),
+        ])->save();
 
         return redirect()->intended(route('dashboard'));
     }
 
     public function logout(Request $request): RedirectResponse
     {
+        $request->user()?->forceFill(['session_token' => null])->save();
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
@@ -53,8 +60,11 @@ class AuthController extends Controller
     public function password(Request $request): RedirectResponse
     {
         $dados = $request->validate(['current_password' => ['required', 'current_password'], 'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()]]);
-        $request->user()->update(['password' => $dados['password'], 'remember_token' => Str::random(60)]);
+        $request->user()->update(['password' => $dados['password']]);
         $request->session()->regenerate();
+        $token = Str::random(64);
+        $request->session()->put('single_session', $token);
+        $request->user()->forceFill(['session_token' => $token])->save();
 
         return back()->with('success', 'Senha atualizada com sucesso.');
     }

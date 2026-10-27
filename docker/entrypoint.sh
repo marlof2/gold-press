@@ -9,7 +9,7 @@ if [ "${1:-}" = 'apache2-foreground' ]; then
     export APP_KEY="${APP_KEY:-$(cat storage/app.key)}"
     chown -R www-data:www-data /var/www/data storage bootstrap/cache
     php artisan migrate --force
-    php artisan app:bootstrap-admin
+    php artisan db:seed --force
     php artisan storage:link --force
 fi
 exec "$@"

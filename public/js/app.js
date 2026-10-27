@@ -23,22 +23,4 @@
   const input=document.getElementById(button.dataset.password),show=input.type==='password';
   input.type=show?'text':'password'; button.textContent=show?'Ocultar':'Mostrar'; button.setAttribute('aria-label',show?'Ocultar senha':'Mostrar senha');
  }));
- const client=document.getElementById('cliente_id'), feedback=document.getElementById('cliente-feedback');
- let clientRequest;
- async function loadClient() {
-  if(!client) return;
-  clientRequest?.abort(); clientRequest=new AbortController();
-  const fields=['nome','documento','endereco','cidade','bairro','uf','cep','telefone'];
-  fields.forEach(field=>{document.getElementById(field).value='';});
-  if(!client.value) { feedback.hidden=true; return; }
-  feedback.hidden=false; feedback.textContent='Carregando dados do cliente…';
-  try {
-   const response=await fetch(`${client.dataset.url}/${client.value}/dados`,{signal:clientRequest.signal,headers:{Accept:'application/json'}});
-   if(!response.ok) throw new Error('Falha ao carregar');
-   const data=await response.json(); fields.forEach(field=>{document.getElementById(field).value=data[field]??'';});
-   feedback.hidden=true;
-  } catch(error) { if(error.name!=='AbortError') feedback.textContent='Não foi possível carregar o cliente. Selecione novamente ou atualize a página.'; }
- }
- client?.addEventListener('change',loadClient);
- if(client?.value && !document.getElementById('nome').value) loadClient();
 })();

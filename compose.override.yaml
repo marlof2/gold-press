@@ -1,0 +1,20 @@
+# Ambiente de desenvolvimento: monta o código do host no container.
+# Produção deve ignorar este arquivo:
+#   docker compose -f compose.yaml up -d --build
+services:
+  app:
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+    volumes:
+      - ./app:/var/www/html/app
+      - ./bootstrap/app.php:/var/www/html/bootstrap/app.php
+      - ./bootstrap/providers.php:/var/www/html/bootstrap/providers.php
+      - ./config:/var/www/html/config
+      - ./database:/var/www/html/database
+      - ./lang:/var/www/html/lang
+      - ./public:/var/www/html/public
+      - ./resources:/var/www/html/resources
+      - ./routes:/var/www/html/routes
+      - ./tests:/var/www/html/tests
+      - ./.env:/var/www/html/.env

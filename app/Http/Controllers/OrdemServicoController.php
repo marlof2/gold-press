@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreOrdemServicoRequest;
 use App\Models\Cliente;
 use App\Models\OrdemServico;
+use App\Models\Produto;
 use App\Models\Status;
 use App\Services\SalvarOrdemServico;
 use Illuminate\Contracts\View\View;
@@ -19,8 +20,8 @@ class OrdemServicoController extends Controller
     public function index(Request $request): View
     {
         $filtros = $request->validate(['q' => ['nullable', 'string', 'max:255'], 'status_id' => ['nullable', 'integer', 'exists:statuses,id']]);
-        $ordens = OrdemServico::with('status')->when($filtros['q'] ?? null, fn ($query, $q) => $query->where(function ($query) use ($q) {
-            $query->where('nome', 'like', '%'.$q.'%')->orWhereHas('cliente', fn ($cliente) => $cliente->where('nome', 'like', '%'.$q.'%'))->orWhere('descricao', 'like', '%'.$q.'%')->orWhere('id', ltrim($q, '#0'));
+        $ordens = OrdemServico::with('status')->withCount('itens')->when($filtros['q'] ?? null, fn ($query, $q) => $query->where(function ($query) use ($q) {
+            $query->where('nome', 'like', '%'.$q.'%')->orWhereHas('cliente', fn ($cliente) => $cliente->where('nome', 'like', '%'.$q.'%'))->orWhere('descricao', 'like', '%'.$q.'%')->orWhereHas('itens', fn ($itens) => $itens->where('descricao', 'like', '%'.$q.'%'))->orWhere('id', ltrim($q, '#0'));
         }))
             ->when($filtros['status_id'] ?? null, fn ($query, $id) => $query->where('status_id', $id))->latest()->paginate(15)->withQueryString();
 
@@ -34,7 +35,14 @@ class OrdemServicoController extends Controller
 
     private function formulario(?OrdemServico $ordem = null): View
     {
-        return view('ordens.create', ['ordem' => $ordem, 'clientes' => Cliente::orderBy('nome')->get(['id', 'nome', 'telefone']), 'statuses' => Status::orderBy('posicao')->orderBy('nome')->get()]);
+        $ordem?->load('itens');
+
+        return view('ordens.create', [
+            'ordem' => $ordem,
+            'clientes' => Cliente::orderBy('nome')->get(['id', 'nome', 'telefone', 'documento', 'endereco', 'cidade', 'bairro', 'uf', 'cep']),
+            'statuses' => Status::orderBy('posicao')->orderBy('nome')->get(),
+            'produtos' => Produto::ativos()->orderBy('nome')->get(),
+        ]);
     }
 
     public function edit(OrdemServico $ordem): View
@@ -64,7 +72,15 @@ class OrdemServicoController extends Controller
             return back()->withInput()->withErrors(['documento' => 'Não foi possível salvar e gerar o documento da OS. Tente novamente.']);
         }
 
-        return redirect()->route('ordens.success', $ordem->token)->with('success', 'Ordem de serviço salva com sucesso.');
+        $mensagem = 'Ordem de serviço salva com sucesso.';
+        $rota = route('ordens.success', $ordem->token);
+
+        if ($request->input('acao') === 'salvar_docx') {
+            $rota = route('ordens.success', ['token' => $ordem->token, 'baixar' => 1]);
+            $mensagem = 'Ordem de serviço salva. O download do DOCX começou.';
+        }
+
+        return redirect()->to($rota)->with('success', $mensagem);
     }
 
     public function destroy(OrdemServico $ordem): RedirectResponse
@@ -80,7 +96,7 @@ class OrdemServicoController extends Controller
 
     public function success(string $token): View
     {
-        $ordem = OrdemServico::with('status', 'cliente')->where('token', $token)->firstOrFail();
+        $ordem = OrdemServico::with('status', 'cliente', 'itens')->where('token', $token)->firstOrFail();
         $url = Storage::disk('public')->url($ordem->arquivo_path);
         $telefone = preg_replace('/\D/', '', $ordem->telefone);
         if (in_array(strlen($telefone), [10, 11])) {

@@ -4,15 +4,18 @@ namespace Tests\Feature;
 
 use App\Models\Cliente;
 use App\Models\OrdemServico;
+use App\Models\Perfil;
 use App\Models\Status;
 use App\Models\User;
 use App\Services\GerarDocumentoOrdemServico;
+use Database\Seeders\PerfilSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
+use ZipArchive;
 
 class GestaoTest extends TestCase
 {
@@ -29,7 +32,11 @@ class GestaoTest extends TestCase
     private function novaOrdem(?Cliente $cliente = null): OrdemServico
     {
         $cliente ??= Cliente::factory()->create();
-        $this->post(route('ordens.store'), ['cliente_id' => $cliente->id, 'status_id' => Status::where('slug', 'orcamento')->value('id'), 'descricao' => 'Banner da loja', 'quantidade' => 2, 'altura' => 1.5, 'largura' => 2, 'valor_produto_m2' => 20])->assertSessionHasNoErrors();
+        $this->post(route('ordens.store'), [
+            'cliente_id' => $cliente->id,
+            'status_id' => Status::where('slug', 'orcamento')->value('id'),
+            'itens' => [['tipo' => 'm2', 'descricao' => 'Banner da loja', 'unidade' => 'm²', 'quantidade' => 2, 'largura' => 2, 'altura' => 1.5, 'valor_m2' => 20]],
+        ])->assertSessionHasNoErrors();
 
         return OrdemServico::latest('id')->firstOrFail();
     }
@@ -37,10 +44,10 @@ class GestaoTest extends TestCase
     public function test_paginas_e_mutacoes_exigem_login(): void
     {
         $cliente = Cliente::factory()->create();
-        foreach (['/', '/ordens', '/ordens/create', '/clientes', '/clientes/create', '/clientes/'.$cliente->id, '/clientes/'.$cliente->id.'/dados', '/statuses', '/statuses/create', '/minha-conta'] as $url) {
+        foreach (['/', '/ordens', '/ordens/create', '/clientes', '/clientes/create', '/clientes/'.$cliente->id, '/clientes/'.$cliente->id.'/dados', '/statuses', '/statuses/create', '/produtos', '/produtos/create', '/minha-conta', '/usuarios', '/usuarios/create', '/empresa'] as $url) {
             $this->get($url)->assertRedirect(route('login'));
         }
-        foreach (['/ordens', '/clientes', '/statuses'] as $url) {
+        foreach (['/ordens', '/clientes', '/statuses', '/produtos', '/usuarios'] as $url) {
             $this->post($url, [])->assertRedirect(route('login'));
         }
         $this->delete('/clientes/'.$cliente->id)->assertRedirect(route('login'));
@@ -70,6 +77,64 @@ class GestaoTest extends TestCase
         }
         $this->post('/login', ['email' => $user->email, 'password' => 'SenhaSegura12345'])->assertSessionHasErrors('email');
         $this->assertGuest();
+    }
+
+    public function test_login_sem_manter_conectado_e_sessao_unica(): void
+    {
+        $user = User::factory()->create(['email' => 'sessao@example.test', 'password' => Hash::make('SenhaSegura12345')]);
+        $this->get('/login')->assertOk()->assertDontSee('Manter conectado');
+        $this->post('/login', ['email' => $user->email, 'password' => 'SenhaSegura12345'])->assertRedirect(route('dashboard'));
+        $this->assertAuthenticatedAs($user);
+        $this->assertNotNull($user->fresh()->session_token);
+
+        auth()->user()->forceFill(['session_token' => 'token-de-outro-dispositivo'])->save();
+        $this->get('/')->assertRedirect(route('login'))->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
+
+    public function test_crud_de_usuarios_e_protecao_da_propria_conta(): void
+    {
+        $admin = $this->entrar();
+        $this->seed(PerfilSeeder::class);
+        $perfilAdmin = Perfil::where('slug', Perfil::ADMIN)->firstOrFail();
+        $perfilOperador = Perfil::where('slug', Perfil::OPERADOR)->firstOrFail();
+
+        $this->get('/usuarios')->assertOk()->assertSee($admin->name);
+        $this->post('/usuarios', ['name' => 'Novo Operador', 'email' => 'Operador@Example.Test', 'perfil_id' => $perfilOperador->id, 'password' => 'SenhaForte12345', 'password_confirmation' => 'SenhaForte12345'])->assertSessionHasNoErrors();
+        $novo = User::where('email', 'operador@example.test')->firstOrFail();
+        $this->assertSame($perfilOperador->id, $novo->perfil_id);
+
+        $this->get(route('usuarios.edit', $novo))->assertOk()->assertSee('Novo Operador');
+        $this->put(route('usuarios.update', $novo), ['name' => 'Operador Atualizado', 'email' => $novo->email, 'perfil_id' => $perfilAdmin->id])->assertSessionHasNoErrors();
+        $this->assertSame('Operador Atualizado', $novo->fresh()->name);
+        $this->assertSame($perfilAdmin->id, $novo->fresh()->perfil_id);
+
+        $this->post('/usuarios', ['name' => 'Duplicado', 'email' => 'operador@example.test', 'perfil_id' => $perfilOperador->id, 'password' => 'SenhaForte12345', 'password_confirmation' => 'SenhaForte12345'])->assertSessionHasErrors('email');
+        $this->post('/usuarios', ['name' => 'Senha curta', 'email' => 'curta@example.test', 'perfil_id' => $perfilOperador->id, 'password' => '123', 'password_confirmation' => '123'])->assertSessionHasErrors('password');
+        $this->assertDatabaseMissing('users', ['email' => 'curta@example.test']);
+
+        $this->delete(route('usuarios.destroy', $novo))->assertRedirect(route('usuarios.index'));
+        $this->assertDatabaseMissing('users', ['id' => $novo->id]);
+        $this->delete(route('usuarios.destroy', $admin))->assertSessionHasErrors('usuario');
+        $this->assertDatabaseHas('users', ['id' => $admin->id]);
+    }
+
+    public function test_dados_da_empresa_sao_editaveis_e_aparecem_na_os(): void
+    {
+        $this->entrar();
+        Storage::fake('public');
+        $this->get('/empresa')->assertOk()->assertSee('Dados da empresa');
+        $this->put('/empresa', ['nome' => 'Gráfica Nova', 'documento' => '11.222.333/0001-44', 'endereco' => 'Rua A, 10 - Salvador-BA', 'telefone' => '(71) 90000-0000', 'email' => 'contato@grafica.test', 'site' => 'grafica.test'])->assertSessionHasNoErrors();
+        $this->assertDatabaseHas('empresas', ['nome' => 'Gráfica Nova']);
+        $this->get('/empresa')->assertSee('Gráfica Nova')->assertSee('11.222.333/0001-44');
+
+        $os = $this->novaOrdem();
+        $zip = new ZipArchive;
+        $this->assertTrue($zip->open(Storage::disk('public')->path($os->arquivo_path)));
+        $xml = $zip->getFromName('word/document.xml');
+        $zip->close();
+        $this->assertStringContainsString('Gráfica Nova', $xml);
+        $this->assertStringContainsString('CNPJ 11.222.333/0001-44', $xml);
     }
 
     public function test_crud_de_cliente_validacao_e_escape(): void
@@ -131,19 +196,36 @@ class GestaoTest extends TestCase
         $anterior = $os->arquivo_path;
         $os->update(['data_aprovacao' => '2026-10-26', 'data_entrega' => '2026-11-10', 'observacoes' => 'Preservar observações', 'servico_realizado' => 'Corte e acabamento']);
         $this->get(route('ordens.edit', $os))->assertOk()->assertSee('Editar OS')
-            ->assertSee('value="20.00"', false)->assertSee('value="2026-11-10"', false)
+            ->assertSee('value="20,00"', false)->assertSee('value="2026-11-10"', false)
             ->assertSee('Preservar observações')->assertSee('Corte e acabamento');
-        $this->put(route('ordens.update', $os), ['cliente_id' => $os->cliente_id, 'status_id' => Status::where('slug', 'concluida')->value('id'), 'descricao' => 'Banner alterado', 'quantidade' => 3, 'altura' => 2, 'largura' => 2, 'valor_produto_m2' => 10, 'valor_total_final' => 1, 'token' => 'alterado'])->assertSessionHasNoErrors();
+        $this->put(route('ordens.update', $os), [
+            'cliente_id' => $os->cliente_id,
+            'status_id' => Status::where('slug', 'concluida')->value('id'),
+            'itens' => [['tipo' => 'm2', 'descricao' => 'Banner alterado', 'unidade' => 'm²', 'quantidade' => 3, 'largura' => 2, 'altura' => 2, 'valor_m2' => 10]],
+            'data_aprovacao' => '2026-10-26',
+            'data_entrega' => '2026-11-10',
+            'observacoes' => 'Preservar observações',
+            'servico_realizado' => 'Corte e acabamento',
+            'valor_total_final' => 1,
+            'token' => 'alterado',
+        ])->assertSessionHasNoErrors();
         $os->refresh();
         $this->assertSame('120.00', $os->valor_total_final);
         $this->assertSame('Concluída', $os->situacao);
         $this->assertNotSame('alterado', $os->token);
         $this->assertNotSame($anterior, $os->arquivo_path);
+        $this->assertSame(1, $os->itens()->count());
+        $this->assertSame('Banner alterado', $os->itens()->first()->descricao);
         Storage::disk('public')->assertMissing($anterior);
         Storage::disk('public')->assertExists($os->arquivo_path);
         $this->mock(GerarDocumentoOrdemServico::class)->shouldReceive('gerar')->once()->andThrow(new \RuntimeException('Falha'));
-        $this->put(route('ordens.update', $os), ['cliente_id' => $os->cliente_id, 'status_id' => $os->status_id, 'descricao' => 'Não salvar', 'quantidade' => 1])->assertSessionHasErrors('documento');
+        $this->put(route('ordens.update', $os), [
+            'cliente_id' => $os->cliente_id,
+            'status_id' => $os->status_id,
+            'itens' => [['tipo' => 'unitario', 'descricao' => 'Não salvar', 'unidade' => 'un', 'quantidade' => 1, 'valor_unitario' => 10]],
+        ])->assertSessionHasErrors('documento');
         $this->assertSame('Banner alterado', $os->fresh()->descricao);
+        $this->assertSame('Banner alterado', $os->itens()->first()->descricao);
         Storage::disk('public')->assertExists($os->arquivo_path);
         $this->delete(route('ordens.destroy', $os))->assertRedirect(route('ordens.index'));
         Storage::disk('public')->assertMissing($os->arquivo_path);
@@ -159,16 +241,18 @@ class GestaoTest extends TestCase
         $this->assertTrue(Hash::check('SenhaNova123456', $user->fresh()->password));
     }
 
-    public function test_bootstrap_nao_redefine_senha_existente(): void
+    public function test_seed_cria_admin_com_perfil_e_nao_duplica_registros(): void
     {
-        config(['grafica.admin_name' => 'Administrador', 'grafica.admin_email' => 'admin@goldpress.local', 'grafica.admin_password' => 'InicialSenha12345']);
-        $this->artisan('app:bootstrap-admin')->assertSuccessful();
-        $user = User::firstOrFail();
-        $this->assertTrue(Hash::check('InicialSenha12345', $user->password));
-        config(['grafica.admin_password' => 'OutraSenha12345']);
-        $this->artisan('app:bootstrap-admin')->assertSuccessful();
-        $this->assertSame(1, User::count());
-        $this->assertTrue(Hash::check('InicialSenha12345', $user->fresh()->password));
+        $this->seed();
+        $usuario = User::where('email', 'marlosilva.f2@gmail.com')->firstOrFail();
+        $this->assertSame(Perfil::ADMIN, $usuario->perfil?->slug);
+        $this->assertDatabaseHas('empresas', ['nome' => 'Gold Press Digital']);
+        $this->assertDatabaseCount('produtos', 5);
+
+        $this->seed();
+        $this->assertSame(1, User::where('email', 'marlosilva.f2@gmail.com')->count());
+        $this->assertDatabaseCount('empresas', 1);
+        $this->assertDatabaseCount('produtos', 5);
     }
 
     public function test_migracao_vincula_ordens_existentes_sem_perder_dados(): void
@@ -188,6 +272,35 @@ class GestaoTest extends TestCase
         $this->assertSame('producao', $os->status->slug);
         $this->assertSame('ordens/documento-original.docx', $os->arquivo_path);
         $this->assertSame('150.00', $os->valor_total_final);
+    }
+
+    public function test_backfill_converte_os_legada_em_item(): void
+    {
+        DB::table('ordens_servico')->insert([
+            'nome' => 'Cliente legado',
+            'telefone' => '11999991234',
+            'descricao' => 'Plotagem antiga',
+            'unidade' => 'm²',
+            'quantidade' => 1,
+            'largura' => 1.5,
+            'altura' => 2,
+            'total_m2' => 3,
+            'valor_produto_m2' => 50,
+            'valor_total_m2' => 150,
+            'valor_total' => 150,
+            'situacao' => 'orcamento',
+            'token' => (string) Str::uuid(),
+        ]);
+
+        $migration = require database_path('migrations/2026_10_27_113005_backfill_ordem_servico_itens.php');
+        $migration->up();
+
+        $item = DB::table('ordem_servico_itens')->first();
+        $this->assertSame('m2', $item->tipo);
+        $this->assertSame('Plotagem antiga', $item->descricao);
+        $this->assertEquals(3.0, (float) $item->area);
+        $this->assertEquals(50.0, (float) $item->valor_m2);
+        $this->assertEquals(150.0, (float) $item->subtotal);
     }
 
     public function test_paginacao_preserva_a_pesquisa_e_cadastro_invalido_nao_cria_registro(): void

@@ -6,9 +6,6 @@ services:
     ports:
       - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-9090}:80"
     environment:
-      ADMIN_NAME: "${ADMIN_NAME:-Administrador}"
-      ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@goldpress.local}"
-      ADMIN_PASSWORD: "${ADMIN_PASSWORD:-}"
       APP_NAME: "Gold Press"
       APP_ENV: "${APP_ENV:-production}"
       APP_DEBUG: "false"
@@ -17,13 +14,11 @@ services:
       APP_FALLBACK_LOCALE: pt_BR
       DB_CONNECTION: sqlite
       DB_DATABASE: /var/www/data/database.sqlite
-      SESSION_DRIVER: file
+      SESSION_DRIVER: database
+      SESSION_LIFETIME: "${SESSION_LIFETIME:-5256000}"
       SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
       CACHE_STORE: file
       QUEUE_CONNECTION: sync
-      GRAFICA_NOME: "${GRAFICA_NOME:-Gold Press Gráfica}"
-      GRAFICA_ENDERECO: "${GRAFICA_ENDERECO:-Endereço da gráfica}"
-      GRAFICA_TELEFONE: "${GRAFICA_TELEFONE:-(11) 99999-9999}"
     volumes:
       - sqlite_data:/var/www/data
       - app_storage:/var/www/html/storage

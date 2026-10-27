@@ -3,15 +3,18 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\OrdemServicoController;
+use App\Http\Controllers\ProdutoController;
 use App\Http\Controllers\StatusController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'login'])->name('login');
     Route::post('/login', [AuthController::class, 'authenticate'])->name('login.store');
 });
-Route::middleware('auth')->group(function () {
+Route::middleware(['auth', 'single.session'])->group(function () {
     Route::get('/', DashboardController::class)->name('dashboard');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
     Route::get('/minha-conta', [AuthController::class, 'account'])->name('account');
@@ -19,6 +22,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/clientes/{cliente}/dados', [ClienteController::class, 'dados'])->name('clientes.dados');
     Route::resource('clientes', ClienteController::class);
     Route::resource('statuses', StatusController::class)->except('show')->parameters(['statuses' => 'status']);
+    Route::resource('produtos', ProdutoController::class)->except('show')->parameters(['produtos' => 'produto']);
+    Route::get('/empresa', [EmpresaController::class, 'edit'])->name('empresa.edit');
+    Route::put('/empresa', [EmpresaController::class, 'update'])->name('empresa.update');
+    Route::resource('usuarios', UserController::class)->except('show')->parameters(['usuarios' => 'usuario']);
     Route::get('/ordens/{token}/sucesso', [OrdemServicoController::class, 'success'])->whereUuid('token')->name('ordens.success');
     Route::resource('ordens', OrdemServicoController::class)->except('show')->parameters(['ordens' => 'ordem']);
 });
