@@ -10,7 +10,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-Abra http://localhost:8080. O primeiro início cria a chave da aplicação, o SQLite, as tabelas e o link `public/storage`. A chave fica persistida em `storage/app.key`, fora da pasta pública.
+Abra http://localhost:9090. O primeiro início cria a chave da aplicação, o SQLite, as tabelas e o link `public/storage`. A chave fica persistida em `storage/app.key`, fora da pasta pública.
 
 Personalize `GRAFICA_NOME`, `GRAFICA_ENDERECO`, `GRAFICA_TELEFONE` e `APP_URL` no `.env`. Para mudar a porta, configure `APP_PORT` e ajuste `APP_URL` para a mesma porta. Após alterar variáveis, execute `docker compose up -d`.
 
@@ -40,7 +40,7 @@ O botão abre `https://wa.me/55DDDNUMERO?text=...` com mensagem codificada por `
 
 ## Link público e publicação
 
-Em desenvolvimento, o link usa `http://localhost:8080/storage/ordens/{uuid}.docx`. **Um cliente em outro aparelho não consegue acessar o seu localhost.** Para compartilhar, hospede a aplicação em um domínio acessível (HTTPS) ou publique por um túnel e configure `APP_URL` com esse endereço. O Compose limita a porta a `127.0.0.1`; um proxy/túnel local pode encaminhar o acesso. Os arquivos são públicos a quem possuir o link, conforme solicitado; usam nomes UUID.
+Em desenvolvimento, o link usa `http://localhost:9090/storage/ordens/{uuid}.docx`. **Um cliente em outro aparelho não consegue acessar o seu localhost.** Para compartilhar, hospede a aplicação em um domínio acessível (HTTPS) ou publique por um túnel e configure `APP_URL` com esse endereço. O Compose limita a porta a `127.0.0.1`; um proxy/túnel local pode encaminhar o acesso. Os arquivos são públicos a quem possuir o link, conforme solicitado; usam nomes UUID.
 
 Todas as páginas administrativas exigem login. O único documento acessível sem login é o DOCX público com nome UUID, para permitir o envio ao cliente. Ao publicar com HTTPS, defina `APP_ENV=production` e `SESSION_SECURE_COOKIE=true`. Não exponha o diretório raiz da aplicação; o Apache serve somente `public/`.
 
@@ -76,4 +76,4 @@ Altere a senha após o primeiro acesso em **Minha conta**. O login tem limite de
 
 A suíte cobre também autenticação, tentativas de login, alteração de senha, CRUD de clientes/status, filtros, paginação, proteção das rotas, migração de OS legadas e preservação do documento em falhas de edição.
 
-Para acessar pelo celular na mesma rede, configure `APP_BIND_ADDRESS=0.0.0.0` e `APP_URL=http://IP-DO-COMPUTADOR:8080`, recrie o serviço com `docker compose up -d` e abra esse endereço no celular. Em Docker/WSL no Windows, pode ser necessário liberar a porta no firewall e configurar o encaminhamento do WSL. Para clientes fora da rede, use o domínio HTTPS ou túnel público.
+Para acessar pelo celular na mesma rede, configure `APP_BIND_ADDRESS=0.0.0.0` e `APP_URL=http://IP-DO-COMPUTADOR:9090`, recrie o serviço com `docker compose up -d` e abra esse endereço no celular. Em Docker/WSL no Windows, pode ser necessário liberar a porta no firewall e configurar o encaminhamento do WSL. Para clientes fora da rede, use o domínio HTTPS ou túnel público.
