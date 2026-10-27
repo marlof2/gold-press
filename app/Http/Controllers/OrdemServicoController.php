@@ -57,7 +57,7 @@ class OrdemServicoController extends Controller
 
         return view('ordens.create', [
             'ordem' => $ordem, 'origem' => $origem, 'empresa' => Empresa::atual(),
-            'clientes' => Cliente::orderBy('nome')->get(['id', 'nome', 'telefone', 'documento', 'endereco', 'cidade', 'bairro', 'uf', 'cep']),
+            'clientes' => Cliente::orderBy('nome')->get(['id', 'nome', 'telefone', 'documento', 'endereco', 'numero_endereco', 'cidade', 'bairro', 'uf', 'cep']),
             'statuses' => Status::orderBy('posicao')->orderBy('nome')->get(),
             'usuarios' => User::orderBy('name')->get(['id', 'name']),
             'produtos' => Produto::ativos()->orderBy('nome')->get(),

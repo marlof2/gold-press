@@ -31,7 +31,7 @@ class SalvarOrdemServico
 
         $totais = $this->calculadora->totais($itens, $dados);
 
-        foreach (['endereco', 'bairro', 'cidade', 'uf', 'cep'] as $campo) {
+        foreach (['endereco', 'numero_endereco', 'bairro', 'cidade', 'uf', 'cep'] as $campo) {
             if (! array_key_exists($campo, $dados)) {
                 $dados[$campo] = $cliente->$campo;
             }

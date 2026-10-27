@@ -10,7 +10,7 @@ class Cliente extends Model
 {
     use HasFactory;
 
-    public const DADOS_OS = ['nome', 'documento', 'endereco', 'cidade', 'bairro', 'uf', 'cep', 'telefone'];
+    public const DADOS_OS = ['nome', 'documento', 'endereco', 'numero_endereco', 'cidade', 'bairro', 'uf', 'cep', 'telefone'];
 
     protected $fillable = [...self::DADOS_OS, 'email', 'observacoes'];
 

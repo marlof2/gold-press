@@ -301,15 +301,17 @@
     function preencherCliente(dados, preencherEndereco = true) {
         const telefone = document.getElementById('cliente-telefone');
         const documento = document.getElementById('cliente-documento');
-        if (telefone) telefone.textContent = dados.telefone ? M.maskTelefone(dados.telefone) : '';
-        if (documento) documento.textContent = dados.documento || '';
+        if (telefone) telefone.textContent = dados.telefone ? M.maskTelefone(dados.telefone) : '—';
+        if (documento) documento.textContent = dados.documento ? M.maskCpfCnpj(dados.documento) : '—';
+        const documentoLabel = document.getElementById('cliente-documento-label');
+        if (documentoLabel) documentoLabel.textContent = dados.documento ? (M.onlyDigits(dados.documento).length === 14 ? 'CNPJ' : 'CPF') : 'CPF / CNPJ';
         if (preencherEndereco) {
             valorDe('endereco', dados.endereco);
             valorDe('bairro', dados.bairro);
             valorDe('cidade', dados.cidade);
             valorDe('uf', dados.uf);
             valorDe('cep', dados.cep ? M.maskCep(dados.cep) : '');
-            valorDe('numero_endereco', '');
+            valorDe('numero_endereco', dados.numero_endereco);
         }
         form.dispatchEvent(new CustomEvent('gp:cliente', { detail: dados }));
     }

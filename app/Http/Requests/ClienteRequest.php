@@ -24,6 +24,7 @@ class ClienteRequest extends FormRequest
             'documento' => ['nullable', 'regex:/^(?:[0-9]{11}|[0-9]{14})$/', Rule::unique('clientes')->ignore($this->route('cliente'))],
             'telefone' => ['required', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
             'email' => ['nullable', 'email', 'max:255'],
+            'numero_endereco' => ['nullable', 'string', 'max:20'],
             'endereco' => ['nullable', 'string', 'max:255'], 'cidade' => ['nullable', 'string', 'max:255'], 'bairro' => ['nullable', 'string', 'max:255'],
             'uf' => ['nullable', 'regex:/^[A-Z]{2}$/'], 'cep' => ['nullable', 'string', 'max:10'], 'observacoes' => ['nullable', 'string', 'max:10000'],
         ];
