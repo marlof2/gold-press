@@ -110,8 +110,10 @@ class GestaoTest extends TestCase
         $this->assertSame($perfilAdmin->id, $novo->fresh()->perfil_id);
 
         $this->post('/usuarios', ['name' => 'Duplicado', 'email' => 'operador@example.test', 'perfil_id' => $perfilOperador->id, 'password' => 'SenhaForte12345', 'password_confirmation' => 'SenhaForte12345'])->assertSessionHasErrors('email');
-        $this->post('/usuarios', ['name' => 'Senha curta', 'email' => 'curta@example.test', 'perfil_id' => $perfilOperador->id, 'password' => '123', 'password_confirmation' => '123'])->assertSessionHasErrors('password');
-        $this->assertDatabaseMissing('users', ['email' => 'curta@example.test']);
+        $this->post('/usuarios', ['name' => 'Senha curta', 'email' => 'curta@example.test', 'perfil_id' => $perfilOperador->id, 'password' => '123', 'password_confirmation' => '123'])->assertSessionHasNoErrors();
+        $curto = User::where('email', 'curta@example.test')->firstOrFail();
+        $this->assertTrue(Hash::check('123', $curto->password));
+        $curto->delete();
 
         $this->delete(route('usuarios.destroy', $novo))->assertRedirect(route('usuarios.index'));
         $this->assertDatabaseMissing('users', ['id' => $novo->id]);
@@ -236,9 +238,9 @@ class GestaoTest extends TestCase
     {
         $user = $this->entrar();
         $this->get('/minha-conta')->assertOk();
-        $this->put('/minha-conta/senha', ['current_password' => 'errada', 'password' => 'SenhaNova123456', 'password_confirmation' => 'SenhaNova123456'])->assertSessionHasErrors('current_password');
-        $this->put('/minha-conta/senha', ['current_password' => 'password', 'password' => 'SenhaNova123456', 'password_confirmation' => 'SenhaNova123456'])->assertSessionHasNoErrors();
-        $this->assertTrue(Hash::check('SenhaNova123456', $user->fresh()->password));
+        $this->put('/minha-conta/senha', ['current_password' => 'errada', 'password' => '123', 'password_confirmation' => '123'])->assertSessionHasErrors('current_password');
+        $this->put('/minha-conta/senha', ['current_password' => 'password', 'password' => '123', 'password_confirmation' => '123'])->assertSessionHasNoErrors();
+        $this->assertTrue(Hash::check('123', $user->fresh()->password));
     }
 
     public function test_seed_cria_admin_com_perfil_e_nao_duplica_registros(): void

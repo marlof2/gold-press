@@ -8,7 +8,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -20,7 +19,7 @@ class AuthController extends Controller
 
     public function authenticate(Request $request): RedirectResponse
     {
-        $dados = $request->validate(['email' => ['required', 'email', 'max:255'], 'password' => ['required', 'string', 'max:255']]);
+        $dados = $request->validate(['email' => ['required', 'email', 'max:255'], 'password' => ['required', 'string']]);
         $dados['email'] = Str::lower(trim($dados['email']));
         $key = 'login:'.hash('sha256', $dados['email'].'|'.$request->ip());
         if (RateLimiter::tooManyAttempts($key, 5)) {
@@ -59,7 +58,7 @@ class AuthController extends Controller
 
     public function password(Request $request): RedirectResponse
     {
-        $dados = $request->validate(['current_password' => ['required', 'current_password'], 'password' => ['required', 'confirmed', Password::min(12)->letters()->numbers()]]);
+        $dados = $request->validate(['current_password' => ['required', 'current_password'], 'password' => ['required', 'string', 'confirmed']]);
         $request->user()->update(['password' => $dados['password']]);
         $request->session()->regenerate();
         $token = Str::random(64);
