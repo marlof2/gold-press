@@ -4,7 +4,7 @@ services:
       context: .
       target: app
     ports:
-      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-8080}:80"
+      - "${APP_BIND_ADDRESS:-127.0.0.1}:${APP_PORT:-9090}:80"
     environment:
       ADMIN_NAME: "${ADMIN_NAME:-Administrador}"
       ADMIN_EMAIL: "${ADMIN_EMAIL:-admin@goldpress.local}"
@@ -12,7 +12,7 @@ services:
       APP_NAME: "Gold Press"
       APP_ENV: "${APP_ENV:-local}"
       APP_DEBUG: "false"
-      APP_URL: "${APP_URL:-http://localhost:8080}"
+      APP_URL: "${APP_URL:-http://localhost:9090}"
       APP_LOCALE: pt_BR
       APP_FALLBACK_LOCALE: pt_BR
       DB_CONNECTION: sqlite
