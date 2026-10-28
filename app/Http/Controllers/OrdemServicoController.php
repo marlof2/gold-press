@@ -15,7 +15,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -88,7 +87,7 @@ class OrdemServicoController extends Controller
         } catch (Throwable $e) {
             report($e);
 
-            return back()->withInput()->withErrors(['documento' => 'Não foi possível salvar e gerar o documento da OS. Tente novamente.']);
+            return back()->withInput()->withErrors(['documento' => 'Não foi possível salvar a OS. Tente novamente.']);
         }
 
         $mensagem = 'Ordem de serviço salva com sucesso.';
@@ -112,11 +111,7 @@ class OrdemServicoController extends Controller
 
     public function destroy(OrdemServico $ordem): RedirectResponse
     {
-        $path = $ordem->arquivo_path;
         $ordem->delete();
-        if ($path) {
-            Storage::disk('public')->delete($path);
-        }
 
         return redirect()->route('ordens.index')->with('success', 'Ordem de serviço excluída.');
     }

@@ -3,14 +3,15 @@
 namespace Tests\Feature;
 
 use App\Models\Cliente;
+use App\Models\Empresa;
 use App\Models\OrdemServico;
+use App\Models\Produto;
 use App\Models\Status;
 use App\Models\User;
 use App\Services\GerarDocumentoOrdemServico;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
-use ZipArchive;
 
 class OrdemServicoTest extends TestCase
 {
@@ -34,8 +35,8 @@ class OrdemServicoTest extends TestCase
             'cliente_id' => $cliente->id,
             'status_id' => Status::where('slug', 'orcamento')->value('id'),
             'itens' => $itens ?? [
-                ['tipo' => 'unitario', 'descricao' => 'Impressão A4 <A&B>', 'unidade' => 'un', 'quantidade' => 4, 'valor_unitario' => 10],
-                ['tipo' => 'm2', 'descricao' => 'Banner <A&B>', 'unidade' => 'm²', 'quantidade' => 1, 'largura' => 1.5, 'altura' => 2, 'valor_m2' => 50],
+                ['tipo' => 'unitario', 'descricao' => 'Impressão A4 <A&B>', 'quantidade' => 4, 'valor_unitario' => 10],
+                ['tipo' => 'm2', 'descricao' => 'Banner <A&B>', 'quantidade' => 1, 'largura' => 1.5, 'altura' => 2, 'valor_m2' => 50],
             ],
             'desconto' => 5,
             'responsavel' => 'Teste',
@@ -59,10 +60,11 @@ class OrdemServicoTest extends TestCase
             ->assertSee('Nova ordem de serviço')
             ->assertSee('Itens & Produtos')
             ->assertSee('Adicionar produto')
-            ->assertSee('RESUMO FINANCEIRO')
+            ->assertSee('Resumo financeiro')
             ->assertSee('Qtd. unitários')
             ->assertSee('Qtd. m²')
-            ->assertSee('Salvar e baixar Word');
+            ->assertSee('Salvar e baixar Word')
+            ->assertDontSee('[unidade]', false);
     }
 
     public function test_cria_calcula_docx_e_whatsapp(): void
@@ -78,18 +80,16 @@ class OrdemServicoTest extends TestCase
         $this->assertSame('190.00', $os->valor_produtos);
         $this->assertSame('185.00', $os->valor_total_final);
         $this->assertCount(2, $os->itens);
+        $this->assertSame('un', $os->itens[0]->tipo->unidade());
+        $this->assertSame('m²', $os->itens[1]->tipo->unidade());
         $this->assertSame('40.00', $os->itens[0]->subtotal);
         $this->assertSame('3.0000', $os->itens[1]->area);
         $this->assertSame('150.00', $os->itens[1]->subtotal);
         $this->assertSame('Impressão A4 <A&B>', $os->descricao);
 
-        Storage::disk('public')->assertExists($os->arquivo_path);
-        $zip = new ZipArchive;
-        $this->assertTrue($zip->open(Storage::disk('public')->path($os->arquivo_path)));
-        $xml = $zip->getFromName('word/document.xml');
-        $zip->close();
+        $xml = $this->documentoXml($os);
         $this->assertStringContainsString('w:orient="portrait"', $xml);
-        $this->assertStringContainsString('ANA &amp; FILHOS &lt;GRÁFICA&gt;', $xml);
+        $this->assertStringContainsString('Ana &amp; Filhos &lt;Gráfica&gt;', $xml);
         $this->assertStringNotContainsString('Cpl:', $xml);
         $this->assertStringContainsString('Impressão A4 &lt;A&amp;B&gt;', $xml);
         $this->assertStringContainsString('Banner &lt;A&amp;B&gt;', $xml);
@@ -106,6 +106,41 @@ class OrdemServicoTest extends TestCase
             ->assertSee('https://wa.me/5511999991234?text=', false)
             ->assertSee(rawurlencode(route('documentos.show', ['token' => $os->token, 'formato' => 'pdf'])), false)
             ->assertSee('Mensagem pronta para envio');
+    }
+
+    public function test_os_deriva_unidade_do_tipo_de_cobranca_ao_criar_e_editar(): void
+    {
+        Storage::fake('public');
+        $produto = Produto::factory()->unitario()->create();
+        $dados = $this->dados([[
+            'produto_id' => $produto->id,
+            'tipo' => 'unitario',
+            'descricao' => $produto->nome,
+            'quantidade' => 4,
+            'valor_unitario' => 10,
+        ]]);
+
+        $this->post('/ordens', $dados)->assertSessionHasNoErrors();
+
+        $os = OrdemServico::with('itens')->firstOrFail();
+        $this->assertSame('un', $os->itens->first()->tipo->unidade());
+        $this->assertSame($produto->id, $os->itens->first()->produto_id);
+        $this->assertStringContainsString('4 un', $this->documentoXml($os));
+        $this->get(route('ordens.success', $os->token))->assertOk()->assertSee('4 un');
+        $this->get(route('ordens.acao', [$os, 'whatsapp']))->assertOk()->assertSee('4 un');
+
+        $produto->update(['tipo' => 'm2', 'valor_m2' => 20]);
+        $this->get(route('ordens.success', $os->token))->assertOk()->assertSee('4 un');
+
+        $dados['itens'][0] = [...$dados['itens'][0], 'tipo' => 'm2', 'largura' => 2, 'altura' => 1, 'valor_m2' => 20];
+        $this->put(route('ordens.update', $os), $dados)->assertSessionHasNoErrors();
+        $this->assertSame('m²', $os->fresh('itens')->itens->first()->tipo->unidade());
+        $this->assertSame('160.00', $os->fresh('itens')->itens->first()->subtotal);
+        $this->get(route('ordens.edit', $os))->assertOk()->assertDontSee('[unidade]', false);
+        $this->get(route('ordens.success', $os->token))->assertOk()->assertSee('4 m²');
+        $this->get(route('ordens.acao', [$os, 'whatsapp']))->assertOk()->assertSee('4 × (2 m × 1 m)');
+        $this->assertStringContainsString('4 m²', view('ordens.pdf', ['ordem' => $os->fresh('itens'), 'empresa' => Empresa::atual()])->render());
+        $this->assertStringContainsString('4 m²', $this->documentoXml($os));
     }
 
     public function test_aceita_desconto_acima_de_nove_reais(): void
@@ -153,14 +188,14 @@ class OrdemServicoTest extends TestCase
         $this->get(route('ordens.success', ['token' => $os->token, 'baixar' => 1]))->assertOk()->assertSee('download-os');
     }
 
-    public function test_falha_no_documento_desfaz_os_e_remove_arquivo(): void
+    public function test_salvar_os_nao_gera_documento_nem_arquivo(): void
     {
         Storage::fake('public');
-        $this->mock(GerarDocumentoOrdemServico::class)->shouldReceive('gerar')->once()->andReturnUsing(function () {
-            throw new \RuntimeException('Disco indisponível');
-        });
-        $this->post('/ordens', $this->dados())->assertSessionHasErrors('documento');
-        $this->assertDatabaseCount('ordens_servico', 0);
+        $this->mock(GerarDocumentoOrdemServico::class)->shouldNotReceive('gerar');
+
+        $this->post('/ordens', $this->dados())->assertSessionHasNoErrors();
+
+        $this->assertDatabaseCount('ordens_servico', 1);
         $this->assertSame([], Storage::disk('public')->allFiles());
     }
 

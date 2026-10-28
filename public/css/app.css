@@ -5,3 +5,7 @@
 @media(max-width:399px){.fields{grid-template-columns:1fr}.metric{padding:13px}.metric>div{gap:5px;font-size:9px}.metric small{font-size:8px}.metric strong{font-size:30px}.button.fit{white-space:normal}.details-list>div{grid-template-columns:95px minmax(0,1fr)}.topbar-section{max-width:155px}.card{padding:18px}.table-card{padding:0}.page-heading .actions{width:100%}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;transition:none!important}}
 
+.product-form-status{border-top:1px solid var(--line);padding-top:16px}
+.product-form-status .checkbox{margin:0}
+.product-form-status .hint{margin:4px 0 0}
+@media(max-width:640px){.product-form-fields{grid-template-columns:minmax(0,1fr)}}

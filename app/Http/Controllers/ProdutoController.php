@@ -26,7 +26,7 @@ class ProdutoController extends Controller
 
     public function create(): View
     {
-        return view('produtos.form', ['produto' => new Produto(['tipo' => 'unitario', 'unidade' => 'un', 'ativo' => true])]);
+        return view('produtos.form', ['produto' => new Produto(['tipo' => 'unitario', 'ativo' => true])]);
     }
 
     public function store(ProdutoRequest $request): RedirectResponse

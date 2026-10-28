@@ -55,7 +55,7 @@ Totais da OS:
 
 Cada etapa monetária é arredondada para centavos. O único ajuste financeiro é o desconto, que não pode ser maior que o subtotal. Totais negativos são rejeitados. O formulário recalcula a cada `input`; o servidor recalcula tudo a partir dos itens e ignora totais enviados pelo navegador. Quantidade e medidas aceitam até 4 casas decimais.
 
-O catálogo em `/produtos` define tipo, unidade e valor padrão. Ao selecionar um produto no autocomplete da OS, o tipo, a unidade e o valor são preenchidos; o operador pode ajustar manualmente. Produtos inativos não aparecem no autocomplete, mas continuam nos itens existentes.
+O catálogo em `/produtos` define tipo de cobrança e valor padrão. Ao selecionar um produto no autocomplete da OS, o tipo e o valor são preenchidos; o operador pode ajustar manualmente. A indicação de unidade é derivada do tipo de cobrança: `un` para unitário e `m²` para metro quadrado. Produtos inativos não aparecem no autocomplete, mas continuam nos itens existentes.
 
 ## Arquivos principais
 
@@ -66,7 +66,7 @@ O catálogo em `/produtos` define tipo, unidade e valor padrão. Ao selecionar u
 - `app/Models/OrdemServico.php`: cabeçalho, totais e relação `itens`.
 - `app/Http/Requests/StoreOrdemServicoRequest.php`: validação condicional por tipo de item.
 - `app/Services/CalcularOrdemServico.php`: cálculo de itens e totais no servidor.
-- `app/Services/SalvarOrdemServico.php`: transação, sincronização dos itens e geração do DOCX.
+- `app/Services/SalvarOrdemServico.php`: transação e sincronização dos itens, sem gerar documentos ao salvar.
 - `app/Services/GerarDocumentoOrdemServico.php`: DOCX fiel à folha física (A4 retrato, cabeçalho, tabela zebrada, totais e assinatura).
 - `app/Http/Controllers/OrdemServicoController.php` e `ProdutoController.php`: telas, transação, DOCX, WhatsApp e catálogo.
 - `resources/views/ordens/create.blade.php` e `ordens/partials/item.blade.php`: formulário em cards e repetidor de itens.
@@ -82,11 +82,11 @@ O botão do WhatsApp abre `https://wa.me/55DDDNUMERO?text=...` com mensagem codi
 
 Na VPS configurada, os links usam `http://144.91.76.180:9090/storage/ordens/...docx`. **Um cliente em outro aparelho não consegue acessar o seu localhost.** Para compartilhar, hospede a aplicação em um domínio acessível (HTTPS) ou publique por um túnel e configure `APP_URL` com esse endereço. O Compose mantém a porta em `127.0.0.1` por padrão. Para acesso externo, configure o encaminhamento no proxy do painel de deploy ou publique a porta explicitamente. Os arquivos são públicos a quem possuir o link, conforme solicitado; usam nomes UUID.
 
-Todas as páginas administrativas exigem login. O único documento acessível sem login é o DOCX público com nome UUID, para permitir o envio ao cliente. Ao publicar com HTTPS, defina `APP_ENV=production` e `SESSION_SECURE_COOKIE=true`. Não exponha o diretório raiz da aplicação; o Apache serve somente `public/`.
+Todas as páginas administrativas exigem login. Os documentos PDF e DOCX são acessíveis sem login pelo link com token UUID da OS, para permitir o envio ao cliente. Ao publicar com HTTPS, defina `APP_ENV=production` e `SESSION_SECURE_COOKIE=true`. Não exponha o diretório raiz da aplicação; o Apache serve somente `public/`.
 
 ## Dados persistentes e comandos
 
-Volumes `sqlite_data` e `app_storage` guardam o banco, a chave, sessões e DOCX. `docker compose down` preserva os dados. `docker compose down -v` apaga esses volumes.
+Volumes `sqlite_data` e `app_storage` guardam o banco, a chave e sessões; documentos de OS não são mantidos em disco. `docker compose down` preserva os dados. `docker compose down -v` apaga esses volumes.
 
 ```sh
 docker compose exec app php artisan test
@@ -107,19 +107,20 @@ Referências: [Laravel Storage](https://laravel.com/docs/13.x/filesystem), [PHPW
 - Pesquisa de OS por nome atual ou histórico do cliente, produto e número; filtro por status e paginação.
 - O atalho **Criar OS** aparece apenas na Visão geral e na listagem de ordens; sidebar e top bar não repetem o atalho.
 - A criação/edição da OS usa cards modernos: identificação e cliente, endereço de execução/entrega com ViaCEP, itens em repetidor, observações/prazos e resumo financeiro sticky. A tela web não replica a folha impressa.
-- O DOCX exportado é a folha física: A4 retrato, cabeçalho da empresa com logo, bloco do cliente, tabela zebrada de itens com linhas pontilhadas, observações, totais, assinatura e termo de impressão, em uma página.
+- O PDF é gerado a cada acesso a `/documentos/{token}/pdf`, com os dados e pagamentos atuais, e enviado diretamente na resposta (`inline` ou download). Não é armazenado em `storage`; a resposta usa `Cache-Control: private, no-store`. O layout inclui detalhes dos itens, resumo de total/pago/saldo, cabeçalho da tabela repetido e numeração de páginas.
+- O Word segue a disposição do PDF: A4 retrato, mesmo logo, cabeçalho com empresa e identificação da OS, cliente e prazos em duas colunas, tabela de cinco colunas, financeiro à direita e notas abaixo. Ambos usam os mesmos dados formatados e têm paginação.
 - Máscaras automáticas para CEP, telefone/WhatsApp, CPF/CNPJ e valores em R$; validação inline e feedback de foco.
 - Clientes em `/clientes`: cadastro, pesquisa, visualização, edição, exclusão e histórico de OS.
-- Produtos em `/produtos`: catálogo com tipo unitário/m², unidade, valor padrão e status ativo/inativo.
+- Produtos em `/produtos`: catálogo com tipo unitário/m², valor padrão e status ativo/inativo.
 - Usuários em `/usuarios`: cadastro, pesquisa, edição, exclusão, perfil e redefinição de senha. Não é possível excluir a própria conta nem o último usuário.
 - Empresa em `/empresa`: nome, razão social, CNPJ, endereço, telefone, e-mail e site usados no cabeçalho do DOCX.
 - Status em `/statuses`: nome, cor, posição e opção de finalizar a ordem. Status finalizados saem das contagens de ordens abertas e atrasadas.
-- Edição e exclusão de OS pela página de detalhes; editar gera um novo DOCX. O arquivo anterior é removido após a confirmação da gravação. Se a geração falhar, o documento anterior e os dados da OS são preservados.
+- Edição e exclusão de OS pela página de detalhes. PDF e Word são gerados apenas ao acessar `/documentos/{token}/{formato}`, sempre com os dados e pagamentos atuais, sem manter cópias em `storage`. O Word usa um arquivo temporário de trabalho, removido ao finalizar a geração, inclusive em falhas.
 - Clientes, status e produtos vinculados a OS não podem ser excluídos. Produtos podem ser desativados.
 - O cadastro do cliente preenche a identificação e pode preencher o endereço de execução; o operador pode ajustar o endereço e o número. Alterar um cliente não reescreve automaticamente as ordens antigas.
 - Layout para celular com cards empilhados, resumo e barra de ações fixos, menu lateral recolhível e atalhos inferiores.
 
-Os DOCX antigos continuam como foram gerados. Abra a OS e salve novamente para recriar o arquivo no layout compacto de uma página. Observações muito longas ou dezenas de itens podem exigir mais de uma página.
+Para remover cópias antigas de documentos em `storage/app/public/ordens`, execute `php artisan ordens:limpar-documentos --dry-run` para conferir a quantidade e depois `php artisan ordens:limpar-documentos`. O comando preserva outros tipos de arquivo e arquivos fora dessa pasta. Observações muito longas ou dezenas de itens podem exigir mais de uma página.
 
 O seed (`php artisan db:seed`, executado automaticamente na subida do container) cria os perfis **Administrador** e **Operador**, o registro inicial da empresa, cinco produtos de exemplo e o usuário `marlosilva.f2@gmail.com` com perfil Administrador e senha padrão `12345678`. Troque a senha após o primeiro acesso. O seed é idempotente: não recria nem redefine registros existentes.
 

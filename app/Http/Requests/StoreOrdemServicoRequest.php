@@ -76,7 +76,6 @@ class StoreOrdemServicoRequest extends FormRequest
             'itens.*.produto_id' => ['nullable', 'integer', 'exists:produtos,id'],
             'itens.*.tipo' => ['required', 'in:unitario,m2'],
             'itens.*.descricao' => ['required', 'string', 'max:255'],
-            'itens.*.unidade' => ['nullable', 'string', 'max:20'],
             'itens.*.codigo' => ['nullable', 'string', 'max:255'],
             'itens.*.referencia' => ['nullable', 'string', 'max:255'],
             'itens.*.formato' => ['nullable', 'string', 'max:255'],

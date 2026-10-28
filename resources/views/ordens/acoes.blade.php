@@ -16,6 +16,6 @@
 <a href="{{ route('documentos.show',['token'=>$item->token,'formato'=>'docx']) }}"><x-icon name="download"/>Baixar Word</a>
 @can('administrar')
 <div class="osf-menu-divider"></div>
-<form method="POST" action="{{ route('ordens.destroy',$item) }}" data-confirm="Excluir permanentemente esta OS e seu documento?">@csrf @method('DELETE')<button type="submit" class="danger"><x-icon name="trash"/>Excluir ordem</button></form>
+<form method="POST" action="{{ route('ordens.destroy',$item) }}" data-confirm="Excluir permanentemente esta OS?">@csrf @method('DELETE')<button type="submit" class="danger"><x-icon name="trash"/>Excluir ordem</button></form>
 @endcan
 </div>

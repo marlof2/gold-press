@@ -34,7 +34,6 @@ class ProdutoRequest extends FormRequest
         return [
             'nome' => ['required', 'string', 'max:255', Rule::unique('produtos')->ignore($this->route('produto'))],
             'tipo' => ['required', 'in:unitario,m2'],
-            'unidade' => ['nullable', 'string', 'max:20'],
             'valor_unitario' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:1000000'],
             'valor_m2' => ['nullable', 'numeric', 'decimal:0,2', 'min:0', 'max:1000000'],
             'ativo' => ['boolean'],

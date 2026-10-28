@@ -25,21 +25,38 @@ class MensagensWhatsApp
         $empresa = Empresa::atual();
         $numero = str_pad((string) $ordem->id, 6, '0', STR_PAD_LEFT);
         $moeda = fn (float $valor): string => 'R$ '.number_format($valor, 2, ',', '.');
-        $abertura = 'Olá, '.$ordem->nome.'! Tudo bem? Aqui é da '.$empresa->nome.'.';
+        $abertura = 'Olá, '.$ordem->nome.'! Aqui é da '.$empresa->nome.'.';
         $documento = route('documentos.show', ['token' => $ordem->token, 'formato' => 'pdf']);
-        $itens = $ordem->itens->take(8)->map(fn ($item) => '• '.$item->descricao.' — '.rtrim(rtrim(number_format((float) $item->quantidade, 4, ',', '.'), '0'), ',').' '.$item->unidade)->join("\n");
+        $quantidade = fn ($valor): string => rtrim(rtrim(number_format((float) $valor, 4, ',', '.'), '0'), ',');
+        $itens = $ordem->itens->take(8)->map(function ($item) use ($quantidade): string {
+            $medida = $item->tipo->isMetroQuadrado()
+                ? $quantidade($item->quantidade).' × ('.$quantidade($item->largura).' m × '.$quantidade($item->altura).' m)'
+                : $quantidade($item->quantidade).' un';
+
+            return '• '.$item->descricao.' — '.$medida;
+        })->join("\n");
         if ($ordem->itens->count() > 8) {
-            $itens .= "\n".'E mais '.($ordem->itens->count() - 8).' itens no documento.';
+            $itens .= "\n".'Confira os demais '.($ordem->itens->count() - 8).' itens no PDF.';
         }
-        $financeiro = 'Valor total: '.$moeda((float) $ordem->valor_total_final)."\n".'Já recebido: '.$moeda($ordem->valorPago())."\n".'Saldo restante: '.$moeda($ordem->saldoRestante());
-        $fecho = "\n\nConfira os detalhes da OS #".$numero.":\n".$documento."\n\nQualquer dúvida, estamos à disposição!";
+        $pago = $ordem->valorPago();
+        $saldo = $ordem->saldoRestante();
+        $financeiro = '*Total do pedido: '.$moeda((float) $ordem->valor_total_final).'*';
+        if ($saldo <= 0) {
+            $financeiro .= "\nPagamento quitado. Obrigado!";
+        } elseif ($pago > 0) {
+            $financeiro .= "\nJá pago: ".$moeda($pago)."\n*Saldo a pagar: ".$moeda($saldo).'*';
+        } else {
+            $financeiro .= "\nPagamento pendente.";
+        }
+        $fecho = "\n\nDetalhes e PDF atualizado:\n".$documento."\n\nSe precisar de ajuda, fale com a gente por aqui.";
         $retirada = $empresa->endereco ? "\nLocal de retirada: ".$empresa->endereco : '';
+        $prazo = $ordem->data_entrega ? "\nPrevisão de entrega: ".$ordem->data_entrega->format('d/m/Y') : "\nEntrega a combinar.";
 
         return [
-            'pedido' => $abertura."\n\nSegue a OS #".$numero." para sua conferência:\n".$itens."\n\n".$financeiro.($ordem->data_entrega ? "\nPrevisão de entrega: ".$ordem->data_entrega->format('d/m/Y') : '').$fecho,
-            'producao' => $abertura."\n\nSeu pedido da OS #".$numero.' está em produção. Avisaremos assim que estiver pronto!'.$fecho,
-            'retirada' => $abertura."\n\nSeu pedido da OS #".$numero.' está pronto para retirada!'.$retirada."\n\n".$financeiro."\nPodemos combinar a retirada por aqui?".$fecho,
-            'envio' => $abertura."\n\nSeu pedido da OS #".$numero." está pronto para envio!\nPodemos confirmar o endereço e combinar a entrega por aqui?\n\n".$financeiro.$fecho,
+            'pedido' => $abertura."\n\n*Ordem de serviço #".$numero."*\n".$itens."\n\n".$financeiro.$prazo."\nConfira os itens e nos avise se precisar de algum ajuste.".$fecho,
+            'producao' => $abertura."\n\nSeu pedido #".$numero.' está em produção. Avisaremos assim que estiver pronto!'.$prazo.$fecho,
+            'retirada' => $abertura."\n\nSeu pedido #".$numero.' está pronto para retirada!'.$retirada."\n\n".$financeiro."\nPodemos combinar a retirada por aqui?".$fecho,
+            'envio' => $abertura."\n\nSeu pedido #".$numero." está pronto para envio!\nPodemos confirmar o endereço e combinar a entrega por aqui?\n\n".$financeiro.$fecho,
         ];
     }
 }

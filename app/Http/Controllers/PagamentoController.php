@@ -45,7 +45,7 @@ class PagamentoController extends Controller
         if ($request->expectsJson()) {
             $request->session()->flash('success', 'Pagamento registrado. O saldo da OS foi atualizado.');
 
-            return response()->json(['message' => 'Pagamento registrado. O saldo da OS foi atualizado.']);
+            return response()->json(['message' => 'Pagamento registrado. O saldo da OS foi atualizado.', 'valor_pago' => $ordem->valorPago()]);
         }
 
         return back()->with('success', 'Pagamento registrado. O saldo da OS foi atualizado.');
@@ -60,7 +60,7 @@ class PagamentoController extends Controller
         if ($request->expectsJson()) {
             $request->session()->flash('success', 'Pagamento estornado. O registro foi mantido no histórico.');
 
-            return response()->json(['message' => 'Pagamento estornado. O registro foi mantido no histórico.']);
+            return response()->json(['message' => 'Pagamento estornado. O registro foi mantido no histórico.', 'valor_pago' => $ordem->valorPago()]);
         }
 
         return back()->with('success', 'Pagamento estornado. O registro foi mantido no histórico.');

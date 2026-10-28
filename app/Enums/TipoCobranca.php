@@ -16,6 +16,14 @@ enum TipoCobranca: string
         };
     }
 
+    public function unidade(): string
+    {
+        return match ($this) {
+            self::Unitario => 'un',
+            self::MetroQuadrado => 'm²',
+        };
+    }
+
     public function isMetroQuadrado(): bool
     {
         return $this === self::MetroQuadrado;

@@ -12,7 +12,7 @@ class Produto extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['nome', 'tipo', 'unidade', 'valor_unitario', 'valor_m2', 'ativo'];
+    protected $fillable = ['nome', 'tipo', 'valor_unitario', 'valor_m2', 'ativo'];
 
     public function itens(): HasMany
     {

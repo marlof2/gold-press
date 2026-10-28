@@ -13,7 +13,7 @@ class OrdemServicoItem extends Model
 
     protected $table = 'ordem_servico_itens';
 
-    protected $fillable = ['ordem_servico_id', 'produto_id', 'tipo', 'descricao', 'unidade', 'codigo', 'referencia', 'formato', 'vias', 'cores', 'quantidade', 'largura', 'altura', 'area', 'valor_unitario', 'valor_m2', 'subtotal', 'posicao'];
+    protected $fillable = ['ordem_servico_id', 'produto_id', 'tipo', 'descricao', 'codigo', 'referencia', 'formato', 'vias', 'cores', 'quantidade', 'largura', 'altura', 'area', 'valor_unitario', 'valor_m2', 'subtotal', 'posicao'];
 
     public function ordem(): BelongsTo
     {

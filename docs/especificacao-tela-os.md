@@ -70,16 +70,18 @@ Fluxo ViaCEP:
 
 Cada item é um card com:
 
-- Produto/descrição com autocomplete nativo (`datalist`) do catálogo ativo. Selecionar um produto preenche tipo, unidade e valor; o texto pode ser livre.
+- Produto/descrição com autocomplete nativo (`datalist`) do catálogo ativo. Selecionar um produto preenche tipo e valor; o texto pode ser livre.
 - Tipo de cobrança em segmented control: **Unitário** ou **m²**. O tipo do produto é aplicado, mas pode ser alterado manualmente.
 - Quantidade (até 4 casas).
 - Subtotal calculado e somente leitura.
 - Campos condicionais:
-  - Unitário: valor unitário e unidade.
-  - m²: largura, altura, área total calculada, valor do m² e unidade.
+  - Unitário: valor unitário.
+  - m²: largura, altura, área total calculada e valor do m².
 - Detalhes adicionais colapsáveis: código, referência, formato, vias e cores.
 - Ações: duplicar e excluir. A exclusão do último item é bloqueada; a remoção dos demais é instantânea com toast “Desfazer” (6 s).
 - “+ Adicionar produto” no cabeçalho do card e um botão tracejado no fim da lista.
+
+A indicação de unidade nas telas, documentos e mensagens é derivada do tipo de cobrança do item: `un` para unitário e `m²` para metro quadrado. Não há campo de unidade separado no produto ou na OS.
 
 Regras de cálculo:
 
@@ -137,7 +139,6 @@ Regras de cálculo:
 | id | bigint |
 | nome | string |
 | tipo | string (`unitario`/`m2`) |
-| unidade | string(20) nullable |
 | valor_unitario | decimal(15,2) |
 | valor_m2 | decimal(15,2) |
 | ativo | boolean |
@@ -152,7 +153,6 @@ Regras de cálculo:
 | produto_id | FK `produtos` nullable (nullOnDelete) |
 | tipo | string (`unitario`/`m2`) |
 | descricao | string |
-| unidade | string(20) nullable |
 | codigo, referencia, formato, vias, cores | string nullable |
 | quantidade | decimal(15,4) |
 | largura, altura, area | decimal(15,4) nullable |
@@ -166,7 +166,7 @@ Regras de cálculo:
 
 - Cabeçalho: cliente, status, nome, documento, telefone, endereço, `numero_endereco`, bairro, cidade, UF, CEP.
 - Totais: `total_m2`, `quantidade`, `valor_total`, `valor_produtos`, `desconto`, `valor_total_final`.
-- Observações, serviço realizado, responsável, condições, datas, situação, token e `arquivo_path`.
+- Observações, serviço realizado, responsável, condições, datas, situação e token; sem caminho de arquivo persistido.
 - `descricao` é o resumo (primeiro item) usado nas listagens.
 
 A migração `backfill_ordem_servico_itens` converte OS antigas em um item: m² quando largura e altura existem; unitário caso contrário.
@@ -183,23 +183,22 @@ Route::get('/ordens/{token}/sucesso', [OrdemServicoController::class, 'success']
 
 - `StoreOrdemServicoRequest`: valida cabeçalho, itens (1..50), tipo, campos condicionais e desconto; normaliza moeda/medidas; mescla a identidade do cliente.
 - `CalcularOrdemServico`: calcula itens e totais; rejeita totais negativos.
-- `SalvarOrdemServico`: transação; salva a OS, recria os itens e gera o DOCX; rollback em falha; remove o DOCX anterior após sucesso.
+- `SalvarOrdemServico`: transação; salva a OS e recria os itens; não gera documentos ao salvar.
 - `ProdutoController`: CRUD; bloqueia exclusão de produto usado em item.
-- `GerarDocumentoOrdemServico`: DOCX via PHPWord.
+- `GerarDocumentoOrdemServico`: DOCX via PHPWord sob demanda pela rota, sem cópia persistida. O arquivo temporário de trabalho é removido ao concluir a geração.
 
-## 9. DOCX — folha física
+## 9. PDF e Word — documentos padronizados
 
-- A4 retrato, margens de 250 twips (topo/rodapé) e 300 twips (laterais).
-- Fonte Courier New 8 pt (títulos 12 pt).
-- Cabeçalho no corpo do documento, em 3 colunas: logo, nome/endereço da empresa e telefone/CNPJ/site; linha inferior. Não usa o header nativo do Word para evitar sobreposição e quebra de página.
-- Título: `ORDEM DE SERVICO 000001` à esquerda; hora e data à direita; linha inferior.
-- Cliente compacto: nome e CPF/CNPJ na primeira linha; endereço (logradouro + número) e cidade na segunda; bairro, UF e CEP na terceira; linha inferior.
-- Tabela de itens: Descrição | Uni | Quant | LAR x ALT = MT2 | VL Metro | VL Unita | VL Total; cabeçalho com linhas superior/inferior; linhas pontilhadas; zebra `#F2F2F2`; valores alinhados à direita.
-- Observações gerais com linha inferior.
-- Rodapé: responsável, situação, datas e condições; à direita, valor produtos, desconto e valor total (negrito com linha superior).
-- Assinatura: “Impressão em 1 via - 1a VIA (X) - *** Obrigado pela Preferencia ***” e “Visto ______”.
-- Sem rodapé de página do Word; o documento deve caber em uma página para OS típicas. Observações muito longas ou dezenas de itens podem gerar mais de uma página.
-- Escaping XML habilitado; logo embutida no corpo.
+- O layout do PDF é a referência para o Word; ambos usam A4 retrato e a mesma sequência de blocos.
+- O logo original `public/img/logo-gold-press.png` aparece no cabeçalho dos dois formatos. O Docker inclui GD para incorporar esse PNG no PDF.
+- Cabeçalho: logo e dados da empresa à esquerda; título, número e status da OS à direita.
+- Cliente: nome, documento, telefone e endereço à esquerda; emissão, entrega e aprovação à direita. Responsável da gráfica abaixo.
+- Itens: Produto / serviço | Qtd. | Medidas | Preço | Subtotal. Código, referência, formato, cores e vias aparecem junto à descrição. Cabeçalho repetido nas páginas seguintes.
+- Resumo financeiro à direita: subtotal, desconto, total, valor pago e saldo restante.
+- Condições de pagamento, observações e serviço realizado abaixo, quando preenchidos.
+- Rodapé com identificação da OS, data de geração e paginação. Documentos extensos podem ocupar mais de uma página.
+- `DadosDocumentoOrdemServico` concentra os campos e a formatação compartilhados pelos dois geradores.
+- Escaping HTML/XML habilitado; nenhuma cópia de PDF ou Word é mantida no storage.
 
 ## 10. Critérios de aceite
 
@@ -210,6 +209,6 @@ Route::get('/ordens/{token}/sucesso', [OrdemServicoController::class, 'success']
 - Máscaras de CEP, telefone, CPF/CNPJ e moeda funcionam.
 - Resumo atualiza em tempo real e bloqueia total negativo.
 - “Salvar e baixar Word” salva e inicia o download.
-- Edição preserva o token, substitui o DOCX e mantém o arquivo anterior em caso de falha.
+- Edição preserva o token; o próximo acesso gera PDF ou DOCX com os dados atuais, sem armazenar arquivos.
 - Layout funcional em 1440, 1024 e 390 px; navegação por teclado e foco visível.
 - Suíte de testes passando, incluindo cálculo, validação condicional, catálogo, backfill e DOCX.

@@ -11,7 +11,7 @@
 <div class="section-heading"><div><h2>Itens da OS</h2><p>{{ $ordem->itens->count() }} {{ $ordem->itens->count() === 1 ? 'item' : 'itens' }} nesta ordem.</p></div><x-status-badge :status="$ordem->status"/></div>
 <div class="responsive-table"><table><thead><tr><th>Item</th><th>Tipo</th><th>Qtd</th><th>Medidas</th><th>Valor</th><th>Subtotal</th></tr></thead><tbody>
 @foreach($ordem->itens as $item)
-<tr><td data-label="Item"><span class="record-title">{{ $item->descricao }}</span>@if($item->codigo || $item->referencia)<span class="record-subtitle">{{ collect([$item->codigo, $item->referencia])->filter()->join(' · ') }}</span>@endif</td><td data-label="Tipo"><span class="cell-text">{{ $item->tipo->label() }}</span></td><td data-label="Qtd"><span class="cell-text">{{ $numero($item->quantidade) }} {{ $item->unidade }}</span></td><td data-label="Medidas"><span class="cell-text">{{ $item->medidas() ?: '—' }}</span></td><td data-label="Valor"><span class="cell-text">@if($item->tipo->isMetroQuadrado())R$ {{ number_format((float)$item->valor_m2,2,',','.') }} / m² @else R$ {{ number_format((float)$item->valor_unitario,2,',','.') }} @endif</span></td><td data-label="Subtotal" class="money">R$ {{ number_format((float)$item->subtotal,2,',','.') }}</td></tr>
+<tr><td data-label="Item"><span class="record-title">{{ $item->descricao }}</span>@if($item->codigo || $item->referencia)<span class="record-subtitle">{{ collect([$item->codigo, $item->referencia])->filter()->join(' · ') }}</span>@endif</td><td data-label="Tipo"><span class="cell-text">{{ $item->tipo->label() }}</span></td><td data-label="Qtd"><span class="cell-text">{{ $numero($item->quantidade) }} {{ $item->tipo->unidade() }}</span></td><td data-label="Medidas"><span class="cell-text">{{ $item->medidas() ?: '—' }}</span></td><td data-label="Valor"><span class="cell-text">@if($item->tipo->isMetroQuadrado())R$ {{ number_format((float)$item->valor_m2,2,',','.') }} / m² @else R$ {{ number_format((float)$item->valor_unitario,2,',','.') }} @endif</span></td><td data-label="Subtotal" class="money">R$ {{ number_format((float)$item->subtotal,2,',','.') }}</td></tr>
 @endforeach
 </tbody></table></div>
 </section>
@@ -19,7 +19,19 @@
 <section class="card"><h2>Observações, condições &amp; prazos</h2><dl class="details-list"><div><dt>Responsável da gráfica</dt><dd>{{ $ordem->responsavel ?: '—' }}</dd></div><div><dt>Aprovação</dt><dd>{{ $ordem->data_aprovacao?->format('d/m/Y') ?? '—' }}</dd></div><div><dt>Entrega</dt><dd>{{ $ordem->data_entrega?->format('d/m/Y') ?? 'A combinar' }}</dd></div><div><dt>Pagamento</dt><dd>{{ $ordem->condicoes_pagamento ?: '—' }}</dd></div><div><dt>Serviço realizado</dt><dd>{{ $ordem->servico_realizado ?: '—' }}</dd></div><div><dt>Observações</dt><dd>{{ $ordem->observacoes ?: '—' }}</dd></div></dl></section>
 </div>
 <aside class="osf-detail-aside">
-<section class="card osf-summary"><div class="osf-summary-head"><span class="eyebrow">RESUMO FINANCEIRO</span><h2>Total da OS</h2></div><dl class="osf-summary-list"><div><dt>Subtotal</dt><dd>R$ {{ number_format((float)$ordem->valor_total,2,',','.') }}</dd></div><div><dt>Desconto</dt><dd>R$ {{ number_format((float)$ordem->desconto,2,',','.') }}</dd></div></dl><div class="osf-summary-total"><span>Valor total</span><strong>R$ {{ number_format((float)$ordem->valor_total_final,2,',','.') }}</strong></div><a class="text-button osf-summary-action" data-os-acao href="{{ route('ordens.acao',[$ordem,'pagamentos']) }}"><x-icon name="payment"/>Pagamentos e saldo</a></section>
+@php
+    $pago = $ordem->valorPago();
+    $saldo = $ordem->saldoRestante();
+@endphp
+<section class="card osf-summary osf-financial-summary">
+<div class="osf-summary-head"><h2>Resumo financeiro</h2><span class="osf-financial-state">{{ $saldo <= 0 ? 'Quitada' : ($pago > 0 ? 'Pagamento parcial' : 'Aguardando pagamento') }}</span></div>
+<div class="osf-financial-total"><span>Total da OS</span><strong>R$ {{ number_format((float) $ordem->valor_total_final, 2, ',', '.') }}</strong></div>
+@if((float) $ordem->desconto > 0)
+<dl class="osf-summary-list osf-financial-breakdown"><div><dt>Subtotal</dt><dd>R$ {{ number_format((float) $ordem->valor_total, 2, ',', '.') }}</dd></div><div><dt>Desconto</dt><dd>R$ {{ number_format((float) $ordem->desconto, 2, ',', '.') }}</dd></div></dl>
+@endif
+<dl class="osf-summary-list osf-financial-payments"><div><dt>Valor pago</dt><dd>R$ {{ number_format($pago, 2, ',', '.') }}</dd></div><div class="osf-financial-balance"><dt>Saldo restante</dt><dd>R$ {{ number_format($saldo, 2, ',', '.') }}</dd></div></dl>
+<a class="button fit osf-financial-action" data-os-acao href="{{ route('ordens.acao', [$ordem, 'pagamentos']) }}"><x-icon name="payment"/>{{ $saldo > 0 ? 'Registrar pagamento' : 'Ver pagamentos' }}</a>
+</section>
 </aside>
 </div>
 @if(request('baixar'))

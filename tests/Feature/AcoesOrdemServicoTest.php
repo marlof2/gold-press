@@ -6,7 +6,7 @@ use App\Models\Cliente;
 use App\Models\OrdemServico;
 use App\Models\Status;
 use App\Models\User;
-use App\Services\GerarDocumentoOrdemServico;
+use App\Services\SalvarOrdemServico;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -98,7 +98,7 @@ class AcoesOrdemServicoTest extends TestCase
     {
         $this->actingAs(User::factory()->operador()->create());
         $ordem = OrdemServico::factory()->create();
-        $this->mock(GerarDocumentoOrdemServico::class)->shouldReceive('gerar')->once()->andThrow(new \RuntimeException('Falha'));
+        $this->mock(SalvarOrdemServico::class)->shouldReceive('alterarStatus')->once()->andThrow(new \RuntimeException('Falha ao gravar no banco'));
         $this->patchJson(route('ordens.status', $ordem), ['status_id' => Status::where('slug', 'producao')->value('id')])->assertStatus(500)->assertJsonPath('message', 'Não foi possível atualizar o status. Tente novamente.');
         $this->assertSame($ordem->status_id, $ordem->fresh()->status_id);
     }

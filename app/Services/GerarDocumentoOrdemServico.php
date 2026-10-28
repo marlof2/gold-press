@@ -2,10 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\Empresa;
 use App\Models\OrdemServico;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
+use PhpOffice\PhpWord\Element\Cell;
+use PhpOffice\PhpWord\Element\Section;
 use PhpOffice\PhpWord\IOFactory;
 use PhpOffice\PhpWord\PhpWord;
 use PhpOffice\PhpWord\Settings;
@@ -14,244 +13,146 @@ use RuntimeException;
 
 class GerarDocumentoOrdemServico
 {
-    private const LARGURA = 11300;
-
-    private const MARGEM_CELULA = 20;
+    private const LARGURA = 10800;
 
     public function gerar(OrdemServico $ordem): string
     {
+        $dados = app(DadosDocumentoOrdemServico::class)->para($ordem);
         Settings::setOutputEscapingEnabled(true);
-
         $doc = new PhpWord;
-        $doc->setDefaultFontName('Courier New');
-        $doc->setDefaultFontSize(8);
+        $doc->setDefaultFontName('Arial');
+        $doc->setDefaultFontSize(9);
+        $doc->setDefaultParagraphStyle(['spaceAfter' => 30, 'spaceBefore' => 0]);
         $section = $doc->addSection([
             'orientation' => 'portrait',
-            'marginTop' => 250,
-            'marginBottom' => 250,
-            'marginLeft' => 300,
-            'marginRight' => 300,
+            'marginTop' => 480, 'marginBottom' => 825,
+            'marginLeft' => 540, 'marginRight' => 540,
         ]);
 
-        $empresa = Empresa::atual();
-        $this->cabecalho($section, $empresa);
-        $this->titulo($section, $ordem);
-        $this->cliente($section, $ordem);
-        $this->itens($section, $ordem);
-        $this->observacoes($section, $ordem);
-        $this->rodape($section, $ordem);
-        $this->assinatura($section);
+        $this->cabecalho($section, $dados);
+        $this->cliente($section, $dados);
+        $this->itens($section, $dados);
+        $this->financeiro($section, $dados);
+        foreach ($dados['notas'] as $rotulo => $valor) {
+            $this->titulo($section, $rotulo);
+            foreach (preg_split('/\R/u', $valor) as $linha) {
+                $section->addText($linha ?: ' ', ['color' => '27372F']);
+            }
+        }
+        $footer = $section->addFooter();
+        $footer->addPreserveText('OS #'.$dados['numero'].' · Gerado em '.now()->format('d/m/Y H:i').'     |     Página {PAGE} de {NUMPAGES}', ['size' => 7, 'color' => '65715F']);
 
-        $temporary = tempnam(sys_get_temp_dir(), 'ordem-');
-        if ($temporary === false) {
+        $temporario = tempnam(sys_get_temp_dir(), 'ordem-');
+        if ($temporario === false) {
             throw new RuntimeException('Falha ao criar arquivo temporário.');
         }
-
-        $path = 'ordens/'.$ordem->token.'/'.Str::uuid().'.docx';
-
         try {
-            IOFactory::createWriter($doc, 'Word2007')->save($temporary);
-            $stream = fopen($temporary, 'rb');
-            if ($stream === false) {
-                throw new RuntimeException('Falha ao abrir documento.');
+            IOFactory::createWriter($doc, 'Word2007')->save($temporario);
+            $conteudo = file_get_contents($temporario);
+            if ($conteudo === false) {
+                throw new RuntimeException('Falha ao ler documento gerado.');
             }
-            try {
-                if (! Storage::disk('public')->put($path, $stream)) {
-                    throw new RuntimeException('Falha ao armazenar documento.');
-                }
-            } finally {
-                fclose($stream);
-            }
-        } catch (\Throwable $exception) {
-            Storage::disk('public')->delete($path);
-            throw $exception;
+
+            return $conteudo;
         } finally {
-            @unlink($temporary);
+            @unlink($temporario);
         }
-
-        return $path;
     }
 
-    private function cabecalho($section, Empresa $empresa): void
+    /** @param array<string, mixed> $dados */
+    private function cabecalho(Section $section, array $dados): void
     {
         $table = $section->addTable(['borderSize' => 0, 'cellMargin' => 0]);
-        $table->addRow();
-        $borda = ['borderBottomSize' => 12, 'borderBottomColor' => '000000', 'borderBottomStyle' => 'single', 'valign' => 'center'];
-
-        $logo = $table->addCell(2000, $borda);
-        $identidade = $table->addCell(5500, $borda);
-        $contato = $table->addCell(3800, $borda);
-
-        $arquivo = public_path('img/logo-gold-press.png');
-        if (is_file($arquivo)) {
-            $logo->addImage($arquivo, ['width' => 90, 'height' => 25]);
+        $table->addRow(null, ['cantSplit' => true]);
+        $borda = ['borderBottomSize' => 12, 'borderBottomColor' => 'B28D44'];
+        $empresa = $table->addCell(7020, $borda);
+        if ($dados['logo_path']) {
+            $empresa->addImage($dados['logo_path'], ['width' => 150, 'height' => 42.8]);
         }
-        $identidade->addText($empresa->nome, ['bold' => true, 'size' => 11]);
-        if ($empresa->endereco) {
-            $identidade->addText($empresa->endereco, ['size' => 7]);
+        foreach ($dados['empresa_linhas'] as $linha) {
+            $empresa->addText($linha, ['size' => 7.5, 'color' => '65715F']);
         }
-
-        $contato->addText($empresa->telefone ?: ' ', ['size' => 8], ['alignment' => Jc::RIGHT]);
-        if ($empresa->documento) {
-            $contato->addText('CNPJ '.$empresa->documento, ['size' => 8], ['alignment' => Jc::RIGHT]);
-        }
-        if ($empresa->site) {
-            $contato->addText($empresa->site, ['size' => 7], ['alignment' => Jc::RIGHT]);
-        }
+        $ordem = $table->addCell(3780, $borda);
+        $ordem->addText('ORDEM DE SERVIÇO', ['bold' => true, 'size' => 9, 'color' => '233B30'], ['alignment' => Jc::RIGHT]);
+        $ordem->addText('#'.$dados['numero'], ['bold' => true, 'size' => 22, 'color' => '233B30'], ['alignment' => Jc::RIGHT, 'spaceAfter' => 80]);
+        $ordem->addText($dados['status'], ['size' => 7, 'color' => '65715F'], ['alignment' => Jc::RIGHT]);
+        $section->addTextBreak(1, ['size' => 8]);
     }
 
-    private function titulo($section, OrdemServico $ordem): void
+    /** @param array<string, mixed> $dados */
+    private function cliente(Section $section, array $dados): void
     {
-        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => self::MARGEM_CELULA]);
-        $table->addRow();
-        $borda = ['borderBottomSize' => 8, 'borderBottomColor' => '000000', 'borderBottomStyle' => 'single'];
-        $table->addCell(7000, $borda)->addText('ORDEM DE SERVICO '.str_pad((string) $ordem->id, 6, '0', STR_PAD_LEFT), ['bold' => true, 'size' => 11]);
-        $table->addCell(4300, $borda)->addText('Hora: '.$ordem->created_at->format('H:i').'    Data: '.$ordem->created_at->format('d/m/Y'), ['size' => 8], ['alignment' => Jc::RIGHT]);
+        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => 150]);
+        $table->addRow(null, ['cantSplit' => true]);
+        $cliente = $table->addCell(7344, ['bgColor' => 'F5F7F3']);
+        $this->rotulo($cliente, 'Cliente');
+        $cliente->addText($dados['cliente'], ['bold' => true, 'size' => 10, 'color' => '27372F'], ['spaceAfter' => 60]);
+        $cliente->addText('CPF / CNPJ: '.$dados['documento']);
+        $cliente->addText('Telefone: '.$dados['telefone']);
+        $this->rotulo($cliente, 'Endereço de execução / entrega', 100);
+        $cliente->addText($dados['endereco']);
+        $prazos = $table->addCell(3456, ['bgColor' => 'F5F7F3', 'borderLeftSize' => 6, 'borderLeftColor' => 'B28D44']);
+        foreach ($dados['prazos'] as $rotulo => $valor) {
+            $this->rotulo($prazos, $rotulo);
+            $prazos->addText($valor, [], ['spaceAfter' => 90]);
+        }
+        $section->addText('Responsável da gráfica: '.$dados['responsavel'], ['color' => '27372F'], ['spaceBefore' => 100]);
     }
 
-    private function cliente($section, OrdemServico $ordem): void
+    /** @param array<string, mixed> $dados */
+    private function itens(Section $section, array $dados): void
     {
-        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => self::MARGEM_CELULA]);
-        $table->addRow();
-        $table->addCell(1600)->addText('Cliente ..:', ['size' => 8]);
-        $table->addCell(6200)->addText(mb_strtoupper((string) $ordem->nome), ['size' => 8, 'bold' => true]);
-        $table->addCell(3500)->addText('CPF/Cnpj: '.($ordem->documento ?: ''), ['size' => 7.5]);
-
-        $table->addRow();
-        $table->addCell(1600)->addText('Endereço:', ['size' => 8]);
-        $table->addCell(6200)->addText($this->endereco($ordem), ['size' => 8]);
-        $table->addCell(3500)->addText('Cidade: '.($ordem->cidade ?: ''), ['size' => 7.5]);
-
-        $table->addRow();
-        $borda = ['borderBottomSize' => 8, 'borderBottomColor' => '000000', 'borderBottomStyle' => 'single'];
-        $table->addCell(7000, $borda)->addText('Bairro: '.($ordem->bairro ?: ''), ['size' => 7.5]);
-        $table->addCell(1500, $borda)->addText('UF: '.($ordem->uf ?: ''), ['size' => 7.5]);
-        $table->addCell(2800, $borda)->addText('CEP: '.($ordem->cep ?: ''), ['size' => 7.5]);
-    }
-
-    private function itens($section, OrdemServico $ordem): void
-    {
-        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => self::MARGEM_CELULA]);
-        $larguras = [4000, 600, 900, 2500, 1100, 1100, 1100];
-        $cabecalho = ['Descrição do Item', 'Uni', 'Quant', 'LAR x ALT = MT2', 'VL Metro', 'VL Unita', 'VL Total'];
-
-        $table->addRow();
-        foreach ($cabecalho as $indice => $texto) {
-            $table->addCell($larguras[$indice], [
-                'borderTopSize' => 8,
-                'borderBottomSize' => 8,
-                'borderTopColor' => '000000',
-                'borderBottomColor' => '000000',
-                'borderTopStyle' => 'single',
-                'borderBottomStyle' => 'single',
-            ])->addText($texto, ['size' => 8]);
+        $this->titulo($section, 'Itens e serviços');
+        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => 120]);
+        $larguras = [3672, 1080, 2376, 1836, 1836];
+        $table->addRow(null, ['tblHeader' => true, 'cantSplit' => true]);
+        foreach (['Produto / serviço', 'Qtd.', 'Medidas', 'Preço', 'Subtotal'] as $indice => $rotulo) {
+            $table->addCell($larguras[$indice], ['bgColor' => '233B30', 'borderBottomSize' => 8, 'borderBottomColor' => 'B28D44'])
+                ->addText($rotulo, ['bold' => true, 'size' => 8, 'color' => 'FFFFFF'], ['alignment' => $indice >= 3 ? Jc::RIGHT : Jc::LEFT]);
         }
-
-        $itens = $ordem->itens;
-        if ($itens->isEmpty()) {
-            $itens = collect([null]);
-        }
-
-        foreach ($itens as $indice => $item) {
-            $zebra = $indice % 2 === 1 ? ['bgColor' => 'F2F2F2'] : [];
-            $borda = [...$zebra, 'borderBottomSize' => 6, 'borderBottomColor' => '000000', 'borderBottomStyle' => 'dotted'];
-            $table->addRow();
-
-            if ($item === null) {
-                $table->addCell($larguras[0], $borda)->addText('—', ['size' => 8]);
-                foreach (array_slice($larguras, 1) as $largura) {
-                    $table->addCell($largura, $borda)->addText('', ['size' => 8]);
-                }
-
-                continue;
+        foreach ($dados['itens'] as $indice => $item) {
+            $table->addRow(null, ['cantSplit' => true]);
+            $borda = ['borderBottomSize' => 4, 'borderBottomColor' => 'E5E9E3', 'bgColor' => $indice % 2 === 0 ? 'FFFFFF' : 'F5F7F3'];
+            $descricao = $table->addCell($larguras[0], $borda);
+            $descricao->addText($item['descricao'], ['bold' => true, 'size' => 9, 'color' => '233B30']);
+            foreach ($item['detalhes'] as $detalhe) {
+                $descricao->addText($detalhe, ['size' => 7.5, 'color' => '65715F'], ['spaceBefore' => 40]);
             }
-
-            $porMetroQuadrado = $item->tipo->isMetroQuadrado();
-            $medidas = $porMetroQuadrado
-                ? number_format((float) $item->largura, 2, ',', '.').' x '.number_format((float) $item->altura, 2, ',', '.').' = '.number_format((float) $item->area, 4, ',', '.').' m²'
-                : '';
-            $vlMetro = $porMetroQuadrado ? $this->moeda($item->valor_m2) : '';
-            $vlUnita = $porMetroQuadrado
-                ? $this->moeda((float) $item->area * (float) $item->valor_m2)
-                : $this->moeda($item->valor_unitario);
-
-            $table->addCell($larguras[0], $borda)->addText($item->descricao, ['size' => 8]);
-            $table->addCell($larguras[1], $borda)->addText($item->unidade ?: '', ['size' => 8]);
-            $table->addCell($larguras[2], $borda)->addText(number_format((float) $item->quantidade, 3, ',', '.'), ['size' => 8], ['alignment' => Jc::RIGHT]);
-            $table->addCell($larguras[3], $borda)->addText($medidas, ['size' => 8]);
-            $table->addCell($larguras[4], $borda)->addText($vlMetro, ['size' => 8], ['alignment' => Jc::RIGHT]);
-            $table->addCell($larguras[5], $borda)->addText($vlUnita, ['size' => 8], ['alignment' => Jc::RIGHT]);
-            $table->addCell($larguras[6], $borda)->addText($this->moeda($item->subtotal), ['size' => 8], ['alignment' => Jc::RIGHT]);
+            $table->addCell($larguras[1], $borda)->addText($item['quantidade'], ['size' => 8]);
+            $table->addCell($larguras[2], $borda)->addText($item['medidas'], ['size' => 8]);
+            $preco = $table->addCell($larguras[3], $borda);
+            $preco->addText($item['preco'], ['size' => 8], ['alignment' => Jc::RIGHT]);
+            $preco->addText($item['preco_unidade'], ['size' => 7.5, 'color' => '65715F'], ['alignment' => Jc::RIGHT]);
+            $table->addCell($larguras[4], $borda)->addText($item['subtotal'], ['size' => 8], ['alignment' => Jc::RIGHT]);
         }
     }
 
-    private function observacoes($section, OrdemServico $ordem): void
+    /** @param array<string, mixed> $dados */
+    private function financeiro(Section $section, array $dados): void
     {
-        $section->addText('Observações Gerais:', ['bold' => true, 'size' => 8]);
-        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => self::MARGEM_CELULA]);
-        $table->addRow();
-        $table->addCell(self::LARGURA, ['borderBottomSize' => 8, 'borderBottomColor' => '000000', 'borderBottomStyle' => 'single'])
-            ->addText($ordem->observacoes ?: ' ', ['size' => 8]);
-    }
-
-    private function rodape($section, OrdemServico $ordem): void
-    {
-        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => self::MARGEM_CELULA]);
-        $borda = ['borderBottomSize' => 8, 'borderBottomColor' => '000000', 'borderBottomStyle' => 'single'];
-        $linhasEsquerda = [
-            'Responsável da gráfica' => $ordem->responsavel,
-            'Situação Atual' => $ordem->status?->nome,
-            'Datas' => 'Aprovação: '.($ordem->data_aprovacao?->format('d/m/Y') ?? '/ /').'    Entrega: '.($ordem->data_entrega?->format('d/m/Y') ?? '/ /'),
-            'Condições de Pagamento' => $ordem->condicoes_pagamento,
-        ];
-        $linhasDireita = [
-            'VALOR PRODUTOS' => $this->moeda($ordem->valor_produtos),
-            'DESCONTO' => $this->moeda($ordem->desconto),
-            'VALOR TOTAL' => $this->moeda($ordem->valor_total_final),
-        ];
-
-        $total = max(count($linhasEsquerda), count($linhasDireita));
-        $offsetDireita = $total - count($linhasDireita);
-        for ($i = 0; $i < $total; $i++) {
-            $table->addRow();
-            $esquerdaLabel = array_keys($linhasEsquerda)[$i] ?? '';
-            $esquerdaValor = array_values($linhasEsquerda)[$i] ?? '';
-            $indiceDireita = $i - $offsetDireita;
-            $direitaLabel = $indiceDireita >= 0 ? (array_keys($linhasDireita)[$indiceDireita] ?? '') : '';
-            $direitaValor = $indiceDireita >= 0 ? (array_values($linhasDireita)[$indiceDireita] ?? '') : '';
-            $ultimo = $i === $total - 1;
-            $estilo = $ultimo ? $borda : [];
-            $negrito = $ultimo ? ['bold' => true] : [];
-
-            $table->addCell(2200, $estilo)->addText($esquerdaLabel ? $esquerdaLabel.':' : '', ['size' => 8]);
-            $table->addCell(3600, $estilo)->addText((string) ($esquerdaValor ?: ''), ['size' => 8]);
-            $table->addCell(3200, [...$estilo, ...($ultimo ? ['borderTopSize' => 8, 'borderTopColor' => '000000', 'borderTopStyle' => 'single'] : [])])
-                ->addText($direitaLabel, [...$negrito, 'size' => 8], ['alignment' => Jc::RIGHT]);
-            $table->addCell(2300, [...$estilo, ...($ultimo ? ['borderTopSize' => 8, 'borderTopColor' => '000000', 'borderTopStyle' => 'single'] : [])])
-                ->addText($direitaValor !== '' ? 'R$ '.$direitaValor : '', [...$negrito, 'size' => 8], ['alignment' => Jc::RIGHT]);
+        $section->addTextBreak(1, ['size' => 8]);
+        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => 110]);
+        foreach ($dados['totais'] as $rotulo => $valor) {
+            $table->addRow(null, ['cantSplit' => true]);
+            $table->addCell(5724)->addText('');
+            $estilo = match ($rotulo) {
+                'Total da OS' => ['bgColor' => '233B30', 'borderTopSize' => 8, 'borderTopColor' => 'B28D44'],
+                'Saldo restante' => ['bgColor' => 'F5EEDC', 'borderBottomSize' => 6, 'borderBottomColor' => 'B28D44'],
+                default => [],
+            };
+            $fonte = ['size' => in_array($rotulo, ['Total da OS', 'Saldo restante'], true) ? 11 : 9, 'color' => $rotulo === 'Total da OS' ? 'FFFFFF' : '233B30'];
+            $table->addCell(2540, $estilo)->addText($rotulo, $fonte);
+            $table->addCell(2536, $estilo)->addText($valor, [...$fonte, 'bold' => true], ['alignment' => Jc::RIGHT]);
         }
     }
 
-    private function assinatura($section): void
+    private function rotulo(Cell $cell, string $rotulo, int $espaco = 0): void
     {
-        $table = $section->addTable(['borderSize' => 0, 'cellMargin' => 0]);
-        $table->addRow();
-        $table->addCell(7000)->addText('Impressão em 1 via - 1a VIA (X) - *** Obrigado pela Preferencia ***', ['size' => 8]);
-        $table->addCell(4300)->addText('Visto ______________________________', ['size' => 8], ['alignment' => Jc::RIGHT]);
+        $cell->addText(mb_strtoupper($rotulo), ['size' => 7.5, 'color' => '65715F'], ['spaceBefore' => $espaco]);
     }
 
-    private function endereco(OrdemServico $ordem): string
+    private function titulo(Section $section, string $titulo): void
     {
-        $partes = array_filter([
-            $ordem->endereco,
-            $ordem->numero_endereco,
-        ]);
-
-        return implode(' - ', $partes);
-    }
-
-    private function moeda(mixed $valor): string
-    {
-        return number_format((float) $valor, 2, ',', '.');
+        $section->addText(mb_strtoupper($titulo), ['bold' => true, 'size' => 10, 'color' => '233B30'], ['spaceBefore' => 220, 'spaceAfter' => 110, 'keepNext' => true]);
     }
 }

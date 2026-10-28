@@ -4,6 +4,21 @@
     const conteudo = dialog.querySelector('[data-os-acao-conteudo]');
     let requisicao;
     let gatilho;
+    let urlAcao;
+    let alterado = false;
+    let salvando = false;
+
+    function atualizarRecebido(valor) {
+        const campo = document.querySelector('[data-valor-pago]');
+        if (!campo || typeof valor !== 'number') return;
+        campo.dataset.valorPago = String(valor);
+        campo.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+        document.getElementById('ordem-form')?.dispatchEvent(new Event('gp:pagamentos'));
+    }
+
+    function atualizarPagina() {
+        if (!document.getElementById('ordem-form')) window.location.reload();
+    }
 
     function posicionarMenu(menu) {
         const botao = document.querySelector(`[popovertarget="${CSS.escape(menu.id)}"]`);
@@ -49,7 +64,8 @@
         erro.hidden = false;
         erro.scrollIntoView({ block: 'nearest' });
     }
-    async function abrir(url) {
+    async function abrir(url, mensagem = '') {
+        urlAcao = url;
         requisicao?.abort();
         const atual = new AbortController();
         requisicao = atual;
@@ -69,6 +85,11 @@
             conteudo.innerHTML = html;
             conteudo.querySelectorAll('[data-mask]').forEach((campo) => window.GPMasks?.aplicar(campo));
             window.GPWhatsApp?.inicializar(conteudo);
+            const sucesso = conteudo.querySelector('[data-os-acao-sucesso]');
+            if (sucesso && mensagem) {
+                sucesso.textContent = mensagem;
+                sucesso.hidden = false;
+            }
             conteudo.querySelector('[data-os-acao-fechar]')?.focus();
         } catch (erro) {
             if (erro.name !== 'AbortError') mostrarErro(erro.message);
@@ -80,6 +101,7 @@
         const acao = evento.target.closest('[data-os-acao]');
         if (acao) {
             evento.preventDefault();
+            if (salvando) return;
             const menu = acao.closest('[data-os-menu]');
             gatilho = menu ? document.querySelector(`[popovertarget="${CSS.escape(menu.id)}"]`) : acao;
             document.querySelectorAll('[data-os-menu]:popover-open').forEach((menu) => menu.hidePopover());
@@ -87,17 +109,23 @@
         }
         if (evento.target.closest('[data-os-acao-fechar]')) dialog.close();
     });
-    dialog.addEventListener('close', () => { requisicao?.abort(); gatilho?.focus(); });
+    dialog.addEventListener('close', () => {
+        requisicao?.abort();
+        gatilho?.focus();
+        if (alterado) atualizarPagina();
+    });
     dialog.addEventListener('submit', async (evento) => {
         const form = evento.target;
         if (!(form instanceof HTMLFormElement)) return;
         evento.preventDefault();
-        if (form.dataset.enviando === '1') return;
+        if (salvando || form.dataset.enviando === '1') return;
         if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) return;
+        const urlSalva = urlAcao;
         const botao = evento.submitter;
         const dados = new FormData(form);
         const erros = conteudo.querySelector('[data-os-acao-erros]');
         if (erros) erros.hidden = true;
+        salvando = true;
         form.dataset.enviando = '1';
         if (botao) botao.disabled = true;
         form.setAttribute('aria-busy', 'true');
@@ -108,10 +136,17 @@
                 const mensagem = resultado.errors ? Object.values(resultado.errors).flat().join(' ') : resultado.message || 'Não foi possível salvar. Tente novamente.';
                 throw new Error(mensagem);
             }
-            window.location.reload();
+            alterado = true;
+            atualizarRecebido(resultado.valor_pago);
+            if (!dialog.open) {
+                atualizarPagina();
+            } else if (urlAcao === urlSalva) {
+                await abrir(urlSalva, resultado.message || 'Alterações salvas.');
+            }
         } catch (erro) {
             if (form.isConnected) mostrarErro(erro.message);
         } finally {
+            salvando = false;
             form.dataset.enviando = '0';
             form.removeAttribute('aria-busy');
             if (botao) botao.disabled = false;

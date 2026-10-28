@@ -258,3 +258,21 @@
 
 .osf-dialog-fields{border:0;padding:0;margin:0;min-width:0}
 .osf-dialog-fields:disabled{opacity:.6}
+
+.osf-summary-payments{margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+
+.osf-financial-summary .osf-summary-head h2{margin:0 0 8px}
+.osf-financial-state{display:inline-block;padding:4px 9px;border-radius:4px;background:var(--green-light);color:var(--green);font-size:10px;font-weight:600}
+.osf-financial-total{display:flex;flex-direction:column;gap:6px;margin:22px 0 18px}
+.osf-financial-total>span{font-size:11px;color:#65715f}
+.osf-financial-total>strong{font-size:30px;line-height:1.25;letter-spacing:-1px;color:var(--green);overflow-wrap:anywhere}
+.osf-financial-breakdown{padding-bottom:16px;border-bottom:1px solid var(--line)}
+.osf-financial-payments{margin-top:16px;gap:12px}
+.osf-financial-balance{padding:12px;background:var(--green-light);border-radius:5px}
+.osf-financial-balance dt{color:var(--green);font-weight:600}
+.osf-financial-balance dd{font-size:17px;color:var(--green)}
+.osf-financial-summary .osf-financial-action{width:100%;margin-top:18px;white-space:normal}
+
+.osf-summary-items{margin-bottom:16px;border-bottom:1px solid var(--line);padding-bottom:12px}
+.osf-summary-items>summary{cursor:pointer;color:#65715f;font-size:11px;min-height:28px}
+.osf-summary-items .osf-summary-list{margin-top:10px}

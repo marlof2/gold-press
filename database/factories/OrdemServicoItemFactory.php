@@ -20,7 +20,6 @@ class OrdemServicoItemFactory extends Factory
             'ordem_servico_id' => OrdemServico::factory(),
             'tipo' => TipoCobranca::Unitario,
             'descricao' => fake()->sentence(3),
-            'unidade' => 'un',
             'quantidade' => 1,
             'valor_unitario' => 10,
             'valor_m2' => 0,
@@ -33,7 +32,6 @@ class OrdemServicoItemFactory extends Factory
     {
         return $this->state(fn () => [
             'tipo' => TipoCobranca::MetroQuadrado,
-            'unidade' => 'm²',
             'largura' => 1.5,
             'altura' => 2,
             'area' => 3,

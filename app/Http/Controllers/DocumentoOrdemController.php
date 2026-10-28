@@ -3,14 +3,14 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrdemServico;
+use App\Services\GerarDocumentoOrdemServico;
 use App\Services\GerarPdfOrdemServico;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
 
 class DocumentoOrdemController extends Controller
 {
-    public function show(Request $request, string $token, string $formato, GerarPdfOrdemServico $pdf): Response
+    public function show(Request $request, string $token, string $formato, GerarPdfOrdemServico $pdf, GerarDocumentoOrdemServico $word): Response
     {
         $ordem = OrdemServico::where('token', $token)->firstOrFail();
         $nome = 'OS-'.str_pad((string) $ordem->id, 6, '0', STR_PAD_LEFT).'.'.$formato;
@@ -22,8 +22,12 @@ class DocumentoOrdemController extends Controller
                 'X-Robots-Tag' => 'noindex, nofollow',
             ]);
         }
-        abort_unless($ordem->arquivo_path && Storage::disk('public')->exists($ordem->arquivo_path), 404);
 
-        return Storage::disk('public')->download($ordem->arquivo_path, $nome, ['Cache-Control' => 'private, no-store', 'X-Robots-Tag' => 'noindex, nofollow']);
+        return response($word->gerar($ordem), 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'Content-Disposition' => 'attachment; filename="'.$nome.'"',
+            'Cache-Control' => 'private, no-store',
+            'X-Robots-Tag' => 'noindex, nofollow',
+        ]);
     }
 }

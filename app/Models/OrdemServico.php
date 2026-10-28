@@ -14,7 +14,7 @@ class OrdemServico extends Model
 
     protected $table = 'ordens_servico';
 
-    protected $fillable = ['cliente_id', 'status_id', 'nome', 'documento', 'endereco', 'numero_endereco', 'cidade', 'bairro', 'uf', 'cep', 'telefone', 'descricao', 'responsavel_id', 'responsavel', 'condicoes_pagamento', 'total_m2', 'quantidade', 'valor_total', 'valor_produtos', 'desconto', 'valor_total_final', 'observacoes', 'servico_realizado', 'situacao', 'data_aprovacao', 'data_entrega', 'arquivo_path', 'token'];
+    protected $fillable = ['cliente_id', 'status_id', 'nome', 'documento', 'endereco', 'numero_endereco', 'cidade', 'bairro', 'uf', 'cep', 'telefone', 'descricao', 'responsavel_id', 'responsavel', 'condicoes_pagamento', 'total_m2', 'quantidade', 'valor_total', 'valor_produtos', 'desconto', 'valor_total_final', 'observacoes', 'servico_realizado', 'situacao', 'data_aprovacao', 'data_entrega', 'token'];
 
     public function cliente(): BelongsTo
     {

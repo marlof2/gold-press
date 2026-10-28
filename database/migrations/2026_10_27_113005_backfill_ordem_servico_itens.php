@@ -19,7 +19,6 @@ return new class extends Migration
                 'ordem_servico_id' => $ordem->id,
                 'tipo' => $porMetroQuadrado ? 'm2' : 'unitario',
                 'descricao' => $ordem->descricao ?: 'Item da OS #'.$ordem->id,
-                'unidade' => $ordem->unidade,
                 'codigo' => $ordem->codigo,
                 'referencia' => $ordem->referencia,
                 'formato' => $ordem->formato,

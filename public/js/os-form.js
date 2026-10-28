@@ -104,12 +104,6 @@
                 campo.disabled = !ativo;
                 if (campo.dataset.obrigatorio === '1') campo.required = ativo;
             });
-            if (ativo) {
-                const unidade = campos.querySelector('input[name$="[unidade]"]');
-                if (unidade && (!unidade.value || unidade.value === 'un' || unidade.value === 'm²')) {
-                    unidade.value = tipo === 'm2' ? 'm²' : 'un';
-                }
-            }
         });
     }
 
@@ -132,8 +126,6 @@
 
         const campos = row.querySelector(`[data-campos="${tipo}"]`);
         if (campos) {
-            const unidade = campos.querySelector('input[name$="[unidade]"]');
-            if (unidade) unidade.value = opcao.dataset.unidade || (tipo === 'm2' ? 'm²' : 'un');
             if (tipo === 'm2') {
                 const valor = campos.querySelector('[data-campo="valor_m2"]');
                 if (valor) valor.value = M.formatMoeda(opcao.dataset.valorM2);
@@ -340,6 +332,7 @@
 
     cliente?.addEventListener('change', (evento) => carregarCliente(evento.detail?.preservarEndereco === true));
     carregarCliente(form.dataset.preservarEndereco === '1');
+    form.addEventListener('gp:pagamentos', calcular);
     document.querySelectorAll('[data-ajuste]').forEach((campo) => campo.addEventListener('input', calcular));
     form.querySelectorAll('input, select, textarea').forEach(validarCampo);
     document.querySelectorAll('[data-item-adicionar]').forEach((botao) => botao.addEventListener('click', adicionarItem));

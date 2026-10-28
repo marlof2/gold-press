@@ -15,7 +15,6 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Tests\TestCase;
-use ZipArchive;
 
 class GestaoTest extends TestCase
 {
@@ -35,7 +34,7 @@ class GestaoTest extends TestCase
         $this->post(route('ordens.store'), [
             'cliente_id' => $cliente->id,
             'status_id' => Status::where('slug', 'orcamento')->value('id'),
-            'itens' => [['tipo' => 'm2', 'descricao' => 'Banner da loja', 'unidade' => 'm²', 'quantidade' => 2, 'largura' => 2, 'altura' => 1.5, 'valor_m2' => 20]],
+            'itens' => [['tipo' => 'm2', 'descricao' => 'Banner da loja', 'quantidade' => 2, 'largura' => 2, 'altura' => 1.5, 'valor_m2' => 20]],
         ])->assertSessionHasNoErrors();
 
         return OrdemServico::latest('id')->firstOrFail();
@@ -131,11 +130,8 @@ class GestaoTest extends TestCase
         $this->get('/empresa')->assertSee('Gráfica Nova')->assertSee('11.222.333/0001-44');
 
         $os = $this->novaOrdem();
-        $zip = new ZipArchive;
-        $this->assertTrue($zip->open(Storage::disk('public')->path($os->arquivo_path)));
-        $xml = $zip->getFromName('word/document.xml');
-        $zip->close();
-        $this->assertStringContainsString('Gráfica Nova', $xml);
+        $xml = $this->documentoXml($os);
+        $this->assertStringNotContainsString('Gráfica Nova', $xml);
         $this->assertStringContainsString('CNPJ 11.222.333/0001-44', $xml);
     }
 
@@ -190,12 +186,11 @@ class GestaoTest extends TestCase
         $this->assertSame('Cliente Original', $os->fresh()->nome);
     }
 
-    public function test_edicao_recalcula_e_substitui_documento_com_seguranca(): void
+    public function test_edicao_recalcula_sem_armazenar_documentos_e_preserva_dados_invalidos(): void
     {
         $this->entrar();
         Storage::fake('public');
         $os = $this->novaOrdem();
-        $anterior = $os->arquivo_path;
         $os->update(['data_aprovacao' => '2026-10-26', 'data_entrega' => '2026-11-10', 'observacoes' => 'Preservar observações', 'servico_realizado' => 'Corte e acabamento']);
         $this->get(route('ordens.edit', $os))->assertOk()->assertSee('Editar OS')
             ->assertSee('value="20,00"', false)->assertSee('value="2026-11-10"', false)
@@ -203,7 +198,7 @@ class GestaoTest extends TestCase
         $this->put(route('ordens.update', $os), [
             'cliente_id' => $os->cliente_id,
             'status_id' => Status::where('slug', 'concluida')->value('id'),
-            'itens' => [['tipo' => 'm2', 'descricao' => 'Banner alterado', 'unidade' => 'm²', 'quantidade' => 3, 'largura' => 2, 'altura' => 2, 'valor_m2' => 10]],
+            'itens' => [['tipo' => 'm2', 'descricao' => 'Banner alterado', 'quantidade' => 3, 'largura' => 2, 'altura' => 2, 'valor_m2' => 10]],
             'data_aprovacao' => '2026-10-26',
             'data_entrega' => '2026-11-10',
             'observacoes' => 'Preservar observações',
@@ -215,22 +210,18 @@ class GestaoTest extends TestCase
         $this->assertSame('120.00', $os->valor_total_final);
         $this->assertSame('Concluída', $os->situacao);
         $this->assertNotSame('alterado', $os->token);
-        $this->assertNotSame($anterior, $os->arquivo_path);
         $this->assertSame(1, $os->itens()->count());
         $this->assertSame('Banner alterado', $os->itens()->first()->descricao);
-        Storage::disk('public')->assertMissing($anterior);
-        Storage::disk('public')->assertExists($os->arquivo_path);
-        $this->mock(GerarDocumentoOrdemServico::class)->shouldReceive('gerar')->once()->andThrow(new \RuntimeException('Falha'));
+        $this->mock(GerarDocumentoOrdemServico::class)->shouldNotReceive('gerar');
         $this->put(route('ordens.update', $os), [
             'cliente_id' => $os->cliente_id,
             'status_id' => $os->status_id,
-            'itens' => [['tipo' => 'unitario', 'descricao' => 'Não salvar', 'unidade' => 'un', 'quantidade' => 1, 'valor_unitario' => 10]],
-        ])->assertSessionHasErrors('documento');
+            'itens' => [['tipo' => 'unitario', 'descricao' => 'Não salvar', 'quantidade' => 1]],
+        ])->assertSessionHasErrors('itens.0.valor_unitario');
         $this->assertSame('Banner alterado', $os->fresh()->descricao);
         $this->assertSame('Banner alterado', $os->itens()->first()->descricao);
-        Storage::disk('public')->assertExists($os->arquivo_path);
         $this->delete(route('ordens.destroy', $os))->assertRedirect(route('ordens.index'));
-        Storage::disk('public')->assertMissing($os->arquivo_path);
+        $this->assertSame([], Storage::disk('public')->allFiles());
         $this->assertDatabaseMissing('ordens_servico', ['id' => $os->id]);
     }
 
@@ -265,14 +256,13 @@ class GestaoTest extends TestCase
             'nome' => 'Cliente legado', 'documento' => '123.456.789-01',
             'telefone' => '11999991234', 'descricao' => 'Pedido antigo',
             'situacao' => 'producao', 'token' => (string) Str::uuid(),
-            'arquivo_path' => 'ordens/documento-original.docx', 'valor_total_final' => 150,
+            'valor_total_final' => 150,
         ]);
         $migration->up();
         $os = OrdemServico::firstOrFail();
         $this->assertSame('Cliente legado', $os->cliente->nome);
         $this->assertSame('12345678901', $os->cliente->documento);
         $this->assertSame('producao', $os->status->slug);
-        $this->assertSame('ordens/documento-original.docx', $os->arquivo_path);
         $this->assertSame('150.00', $os->valor_total_final);
     }
 
@@ -282,7 +272,6 @@ class GestaoTest extends TestCase
             'nome' => 'Cliente legado',
             'telefone' => '11999991234',
             'descricao' => 'Plotagem antiga',
-            'unidade' => 'm²',
             'quantidade' => 1,
             'largura' => 1.5,
             'altura' => 2,

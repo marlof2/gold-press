@@ -14,7 +14,6 @@
             'produto_id' => $item->produto_id,
             'tipo' => $item->tipo->value,
             'descricao' => $item->descricao,
-            'unidade' => $item->unidade,
             'codigo' => $item->codigo,
             'referencia' => $item->referencia,
             'formato' => $item->formato,
@@ -76,7 +75,7 @@
 @endforeach
 </div>
 <button type="button" class="osf-add-item" data-item-adicionar><x-icon name="plus"/><span>Adicionar produto</span></button>
-<p class="osf-help">Selecione um produto do catálogo para preencher tipo, unidade e valores. Você pode ajustar tudo manualmente.</p>
+<p class="osf-help">Selecione um produto do catálogo para preencher tipo e valores.</p>
 </section>
 
 <section class="card osf-card">
@@ -94,14 +93,16 @@
 
 <aside class="osf-aside">
 <section class="card osf-summary" id="osf-resumo">
-<div class="osf-summary-head"><span class="eyebrow">RESUMO FINANCEIRO</span><h2>Total da OS</h2></div>
+<div class="osf-summary-head"><h2>Resumo financeiro</h2></div>
+<details class="osf-summary-items"><summary>Itens e medidas</summary>
 <dl class="osf-summary-list">
 <div><dt>Itens</dt><dd data-resumo-itens>0</dd></div>
 <div><dt>Qtd. unitários</dt><dd data-resumo-quantidade-unitario>0</dd></div>
 <div><dt>Qtd. m²</dt><dd data-resumo-quantidade-m2>0</dd></div>
 <div><dt>Área total</dt><dd data-resumo-area>0,0000 m²</dd></div>
-<div><dt>Subtotal dos itens</dt><dd data-resumo-subtotal>R$ 0,00</dd></div>
 </dl>
+</details>
+<dl class="osf-summary-list"><div><dt>Subtotal dos itens</dt><dd data-resumo-subtotal>R$ 0,00</dd></div></dl>
 <div class="osf-field osf-summary-desconto"><label for="desconto">Desconto (R$)</label><input id="desconto" name="desconto" type="text" inputmode="decimal" value="{{ $ajuste('desconto') }}" data-mask="currency" data-ajuste maxlength="18"></div>
 <div class="osf-summary-total"><span>Valor total</span><strong data-resumo-total>R$ 0,00</strong></div>
 <p class="osf-summary-erro" data-resumo-erro hidden>Revise o desconto e os valores recebidos: o saldo não pode ser negativo.</p>
@@ -128,7 +129,7 @@
 <div class="osf-toasts" id="osf-toasts" aria-live="polite" aria-atomic="true"></div>
 <datalist id="produtos-lista">
 @foreach($produtos as $produto)
-<option value="{{ $produto->nome }}" data-id="{{ $produto->id }}" data-tipo="{{ $produto->tipo->value }}" data-unidade="{{ $produto->unidade }}" data-valor-unitario="{{ (float) $produto->valor_unitario }}" data-valor-m2="{{ (float) $produto->valor_m2 }}"></option>
+<option value="{{ $produto->nome }}" data-id="{{ $produto->id }}" data-tipo="{{ $produto->tipo->value }}" data-valor-unitario="{{ (float) $produto->valor_unitario }}" data-valor-m2="{{ (float) $produto->valor_m2 }}"></option>
 @endforeach
 </datalist>
 <template id="osf-item-template">

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#233b30">
+<link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
 <title>@yield('title', 'Painel') · Gold Press</title>
 <link rel="stylesheet" href="{{ asset('css/app.css') }}?v={{ filemtime(public_path('css/app.css')) }}">
 <link rel="stylesheet" href="{{ asset('css/os-form.css') }}?v={{ filemtime(public_path('css/os-form.css')) }}">

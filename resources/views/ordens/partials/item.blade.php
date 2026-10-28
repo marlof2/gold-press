@@ -48,10 +48,6 @@
 <input id="{{ $id('valor_unitario') }}" type="text" inputmode="decimal" name="itens[{{ $index }}][valor_unitario]" value="{{ number_format((float) $valorUnitario, 2, ',', '.') }}" data-mask="currency" data-campo="valor_unitario" data-obrigatorio="1" maxlength="18" @if($tipo !== 'unitario') disabled @else required @endif @class(['is-invalid' => $erro('valor_unitario')])>
 @error('itens.'.$index.'.valor_unitario')<small class="osf-error">{{ $message }}</small>@enderror
 </div>
-<div class="osf-field">
-<label for="{{ $id('unidade') }}">Unidade</label>
-<input id="{{ $id('unidade') }}" type="text" name="itens[{{ $index }}][unidade]" value="{{ $campo('unidade') }}" maxlength="20" placeholder="un">
-</div>
 </div>
 <div class="osf-item-grid osf-item-condicional" data-campos="m2" @if($tipo !== 'm2') hidden @endif>
 <div class="osf-field">
@@ -72,10 +68,6 @@
 <label for="{{ $id('valor_m2') }}">Valor do m² *</label>
 <input id="{{ $id('valor_m2') }}" type="text" inputmode="decimal" name="itens[{{ $index }}][valor_m2]" value="{{ number_format((float) $valorM2, 2, ',', '.') }}" data-mask="currency" data-campo="valor_m2" data-obrigatorio="1" maxlength="18" @if($tipo !== 'm2') disabled @else required @endif @class(['is-invalid' => $erro('valor_m2')])>
 @error('itens.'.$index.'.valor_m2')<small class="osf-error">{{ $message }}</small>@enderror
-</div>
-<div class="osf-field">
-<label for="{{ $id('unidade_m2') }}">Unidade</label>
-<input id="{{ $id('unidade_m2') }}" type="text" name="itens[{{ $index }}][unidade]" value="{{ $campo('unidade', 'm²') }}" maxlength="20" placeholder="m²">
 </div>
 </div>
 <details class="osf-item-detalhes">
