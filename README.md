@@ -124,7 +124,7 @@ Para remover cópias antigas de documentos em `storage/app/public/ordens`, execu
 
 O seed (`php artisan db:seed`, executado automaticamente na subida do container) cria os perfis **Administrador** e **Operador**, o registro inicial da empresa, cinco produtos de exemplo e o usuário `marlosilva.f2@gmail.com` com perfil Administrador e senha padrão `12345678`. Troque a senha após o primeiro acesso. O seed é idempotente: não recria nem redefine registros existentes.
 
-O login tem limite de tentativas, a sessão é renovada ao entrar, o logout invalida a sessão e as mutações usam proteção CSRF. Não há cadastro público de usuários e não existe a opção "Manter conectado": a sessão não expira por tempo (validade longa configurada em `SESSION_LIFETIME`). O driver de sessão é `database`, e cada login grava um token único em `users.session_token`. Se a mesma conta entrar em outro dispositivo, a sessão anterior é encerrada no próximo acesso.
+O login tem limite de tentativas, a sessão é renovada ao entrar, o logout invalida a sessão e as mutações usam proteção CSRF. Não há cadastro público de usuários e não existe a opção "Manter conectado": a sessão expira após 30 dias de inatividade (`SESSION_LIFETIME=43200`, em minutos), e o prazo é renovado a cada acesso. O driver de sessão é `database`, e cada login grava um token único em `users.session_token`. Se a mesma conta entrar em outro dispositivo, a sessão anterior é encerrada no próximo acesso.
 
 A suíte cobre também autenticação, sessão única, tentativas de login, alteração de senha, CRUD de usuários/perfis, dados da empresa, catálogo de produtos, itens unitários/m², cálculo autoritativo, filtros, paginação, proteção das rotas, backfill de OS legadas e preservação do documento em falhas de edição.
 

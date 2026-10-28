@@ -15,7 +15,7 @@ services:
       DB_CONNECTION: sqlite
       DB_DATABASE: /var/www/data/database.sqlite
       SESSION_DRIVER: database
-      SESSION_LIFETIME: "${SESSION_LIFETIME:-5256000}"
+      SESSION_LIFETIME: "${SESSION_LIFETIME:-43200}"
       SESSION_SECURE_COOKIE: "${SESSION_SECURE_COOKIE:-false}"
       CACHE_STORE: file
       QUEUE_CONNECTION: sync
