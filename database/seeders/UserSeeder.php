@@ -24,8 +24,14 @@ class UserSeeder extends Seeder
 
         $senha = '12345678';
         User::create([
-            'name' => 'Marlos Silva',
+            'name' => 'Desenvolvedor',
             'email' => $email,
+            'password' => $senha,
+            'perfil_id' => $perfil->id,
+        ]);
+        User::create([
+            'name' => 'Ana Estela',
+            'email' => 'gold@gmail.com',
             'password' => $senha,
             'perfil_id' => $perfil->id,
         ]);
