@@ -47,6 +47,7 @@ class SalvarOrdemServico
         $dados = [
             ...$dados,
             'nome' => $cliente->nome,
+            'tipo_pessoa' => $cliente->tipo_pessoa,
             'documento' => $cliente->documento,
             'telefone' => $cliente->telefone,
             'numero_endereco' => $dados['numero_endereco'] ?? null,

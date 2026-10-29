@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Perfil;
+use App\Models\Permissao;
 use Illuminate\Database\Seeder;
 
 class PerfilSeeder extends Seeder
@@ -15,7 +16,10 @@ class PerfilSeeder extends Seeder
         ];
 
         foreach ($perfis as $perfil) {
-            Perfil::updateOrCreate(['slug' => $perfil['slug']], $perfil);
+            $registro = Perfil::updateOrCreate(['slug' => $perfil['slug']], $perfil);
+            if ($registro->wasRecentlyCreated) {
+                $registro->permissoes()->sync(Permissao::pluck('id'));
+            }
         }
     }
 }

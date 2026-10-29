@@ -5,6 +5,7 @@ namespace App\Http\Requests;
 use App\Models\Perfil;
 use App\Models\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
@@ -27,6 +28,9 @@ class UserRequest extends FormRequest
     public function rules(): array
     {
         $usuario = $this->route('usuario');
+        if (! $usuario || (string) $usuario->perfil_id !== (string) $this->input('perfil_id')) {
+            Gate::authorize('usuarios.atribuir_perfil');
+        }
 
         return [
             'name' => ['required', 'string', 'max:255'],

@@ -28,7 +28,14 @@
 <div class="osf-item-grid">
 <div class="osf-field osf-item-produto">
 <label for="{{ $id('descricao') }}">Produto / descrição *</label>
+<div class="osf-combobox osf-product-combobox" data-produto-combo>
+<div class="osf-combobox-control">
 <input id="{{ $id('descricao') }}" type="text" name="itens[{{ $index }}][descricao]" value="{{ $campo('descricao') }}" list="produtos-lista" maxlength="255" required autocomplete="off" placeholder="Busque no catálogo ou digite o produto" data-produto @class(['is-invalid' => $erro('descricao')])>
+<button type="button" class="osf-combobox-toggle" data-produto-abrir aria-label="Mostrar produtos" aria-controls="{{ $id('produtos-opcoes') }}" hidden>⌄</button>
+</div>
+<ul id="{{ $id('produtos-opcoes') }}" class="osf-combobox-options" role="listbox" aria-label="Produtos encontrados" data-produto-opcoes hidden></ul>
+<span class="sr-only" role="status" data-produto-feedback></span>
+</div>
 <input type="hidden" name="itens[{{ $index }}][produto_id]" value="{{ $campo('produto_id') }}" data-produto-id>
 @error('itens.'.$index.'.descricao')<small class="osf-error">{{ $message }}</small>@enderror
 </div>

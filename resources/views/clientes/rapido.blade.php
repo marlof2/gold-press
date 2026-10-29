@@ -6,8 +6,9 @@
 <p class="osf-help" data-cliente-carregando role="status" hidden>Carregando cadastro…</p>
 <fieldset class="osf-dialog-fields" data-cliente-campos><div class="osf-grid osf-grid-3">
 <div class="osf-field osf-span-3"><label for="rapido-nome">Nome / razão social *</label><input id="rapido-nome" name="nome" maxlength="255" required autocomplete="name"></div>
+<div class="osf-field"><label for="rapido-tipo-pessoa">Tipo de pessoa *</label><select id="rapido-tipo-pessoa" name="tipo_pessoa" data-tipo-pessoa required><option value="PF" selected>PF — Pessoa física</option><option value="PJ">PJ — Pessoa jurídica</option></select>@error('tipo_pessoa')<small class="osf-error">{{ $message }}</small>@enderror</div>
 <div class="osf-field"><label for="rapido-documento">CPF / CNPJ</label><input id="rapido-documento" name="documento" data-mask="cpf-cnpj" maxlength="18" inputmode="numeric"></div>
-<div class="osf-field"><label for="rapido-telefone">WhatsApp com DDD *</label><input id="rapido-telefone" name="telefone" type="tel" data-mask="telefone" maxlength="20" required autocomplete="tel"></div>
+<div class="osf-field"><label for="rapido-telefone">WhatsApp com DDD (opcional)</label><input id="rapido-telefone" name="telefone" type="tel" data-mask="telefone" maxlength="20" autocomplete="tel"></div>
 <div class="osf-field"><label for="rapido-email">E-mail</label><input id="rapido-email" name="email" type="email" maxlength="255" autocomplete="email"></div>
 <div class="osf-field"><label for="rapido-cep">CEP</label><div class="osf-input-status"><input id="rapido-cep" name="cep" data-mask="cep" data-viacep maxlength="9" inputmode="numeric" placeholder="00000-000"><span class="osf-spinner" data-cep-spinner hidden aria-hidden="true"></span></div><small class="osf-help" data-cep-feedback role="status" aria-live="polite"></small></div>
 <div class="osf-field osf-span-2"><label for="rapido-endereco">Logradouro</label><input id="rapido-endereco" name="endereco" maxlength="255" autocomplete="address-line1"></div>

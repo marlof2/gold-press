@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Cliente;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
@@ -51,13 +52,17 @@ class StoreOrdemServicoRequest extends FormRequest
 
     public function rules(): array
     {
+        if ((float) $this->input('sinal', 0) > 0) {
+            Gate::authorize('pagamentos.criar');
+        }
+
         return [
             'acao' => ['nullable', 'string', Rule::in(['salvar', 'salvar_pdf', 'salvar_docx', 'salvar_whatsapp'])],
             'cliente_id' => ['required', 'integer', 'exists:clientes,id'],
             'status_id' => ['required', 'integer', 'exists:statuses,id'],
             'nome' => ['required', 'string', 'max:255'],
             'documento' => ['nullable', 'string', 'max:255'],
-            'telefone' => ['required', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
+            'telefone' => ['nullable', 'regex:/^(?:55)?[1-9][0-9]{9,10}$/'],
             'endereco' => ['nullable', 'string', 'max:255'],
             'numero_endereco' => ['nullable', 'string', 'max:20'],
             'cidade' => ['nullable', 'string', 'max:255'],

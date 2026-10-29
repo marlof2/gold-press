@@ -51,7 +51,9 @@
 <div class="osf-field osf-span-2"><label for="cliente_id">Cliente *</label><select id="cliente_id" name="cliente_id" data-url="{{ url('/clientes') }}" data-searchable-select data-placeholder="Digite o nome, telefone ou CPF / CNPJ" aria-describedby="cliente-combo-ajuda" required><option value="">Selecione o cliente</option>@foreach($clientes as $cliente)<option value="{{ $cliente->id }}" data-cliente="{{ $cliente->toJson() }}" @selected((string)old('cliente_id',$base?->cliente_id ?? request('cliente_id')) === (string)$cliente->id)>{{ $cliente->nome }} · {{ $cliente->telefone }}</option>@endforeach</select><small id="cliente-combo-ajuda" class="osf-help">Pesquise e selecione o cliente no mesmo campo.</small>@error('cliente_id')<small class="osf-error">{{ $message }}</small>@enderror</div>
 <div class="osf-field"><span>Contato do cliente</span><dl class="osf-client-contact"><div><dt>Telefone</dt><dd id="cliente-telefone">{{ $ordem?->telefone ?: '—' }}</dd></div><div><dt id="cliente-documento-label">CPF / CNPJ</dt><dd id="cliente-documento">{{ $ordem?->documento ?: '—' }}</dd></div></dl><small class="osf-help" id="cliente-feedback" role="status"></small></div>
 </div>
-<div class="osf-links"><button class="text-button" type="button" data-cliente-novo aria-haspopup="dialog" aria-controls="cliente-rapido"><x-icon name="plus"/>Cadastrar cliente aqui</button><a class="text-link" data-cliente-editar aria-haspopup="dialog" aria-controls="cliente-rapido" hidden>Editar cadastro <x-icon name="edit"/></a><a class="button whatsapp compact fit" data-whatsapp-cliente hidden target="_blank" rel="noopener noreferrer"><x-icon name="chat"/>WhatsApp do cliente</a></div>
+<div class="osf-links">@can('clientes.criar')<button class="text-button" type="button" data-cliente-novo aria-haspopup="dialog" aria-controls="cliente-rapido"><x-icon name="plus"/>Cadastrar cliente aqui</button>@endcan
+@can('clientes.editar')<a class="text-link" data-cliente-editar aria-haspopup="dialog" aria-controls="cliente-rapido" hidden>Editar cadastro <x-icon name="edit"/></a>@endcan
+<a class="button whatsapp compact fit" data-whatsapp-cliente hidden target="_blank" rel="noopener noreferrer"><x-icon name="chat"/>WhatsApp do cliente</a></div>
 </section>
 
 <section class="card osf-card">
@@ -107,8 +109,9 @@
 <div class="osf-summary-total"><span>Valor total</span><strong data-resumo-total>R$ 0,00</strong></div>
 <p class="osf-summary-erro" data-resumo-erro hidden>Revise o desconto e os valores recebidos: o saldo não pode ser negativo.</p>
 <div class="osf-payment-summary">
-@if(!$ordem)<div class="osf-field"><label for="sinal">Sinal já recebido (R$)</label><input id="sinal" name="sinal" type="text" inputmode="decimal" value="{{ old('sinal','0,00') }}" data-mask="currency" data-ajuste maxlength="18">@error('sinal')<small class="osf-error">{{ $message }}</small>@enderror</div>@else<p>Recebido: <strong data-valor-pago="{{ $ordem->valorPago() }}">R$ {{ number_format($ordem->valorPago(),2,',','.') }}</strong></p><a class="text-link" data-os-acao href="{{ route('ordens.acao',[$ordem,'pagamentos']) }}">Ver e registrar pagamentos</a>@endif
-<p>Saldo restante: <strong data-resumo-saldo>R$ 0,00</strong></p>
+@if(!$ordem)@can('pagamentos.criar')<div class="osf-field"><label for="sinal">Sinal já recebido (R$)</label><input id="sinal" name="sinal" type="text" inputmode="decimal" value="{{ old('sinal','0,00') }}" data-mask="currency" data-ajuste maxlength="18">@error('sinal')<small class="osf-error">{{ $message }}</small>@enderror</div>@endcan
+@else<p>Recebido: <strong data-valor-pago="{{ $ordem->valorPago() }}">R$ {{ number_format($ordem->valorPago(),2,',','.') }}</strong></p><a class="text-link" data-os-acao href="{{ route('ordens.acao',[$ordem,'pagamentos']) }}">Ver e registrar pagamentos</a>@endif
+<p>Valor a pagar: <strong data-resumo-saldo>R$ 0,00</strong></p>
 </div>
 <p class="osf-help">O servidor recalcula todos os valores ao salvar.</p>
 </section>

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Perfil;
+use App\Models\Permissao;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -25,6 +26,7 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'perfil_id' => fn () => $this->perfil(Perfil::OPERADOR, 'Operador'),
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
@@ -37,12 +39,22 @@ class UserFactory extends Factory
      */
     public function admin(): static
     {
-        return $this->state(fn () => ['perfil_id' => Perfil::firstOrCreate(['slug' => Perfil::ADMIN], ['nome' => 'Administrador', 'descricao' => 'Administração'])->id]);
+        return $this->state(fn () => ['perfil_id' => $this->perfil(Perfil::ADMIN, 'Administrador')]);
     }
 
     public function operador(): static
     {
-        return $this->state(fn () => ['perfil_id' => Perfil::firstOrCreate(['slug' => Perfil::OPERADOR], ['nome' => 'Operador', 'descricao' => 'Operação'])->id]);
+        return $this->state(fn () => ['perfil_id' => $this->perfil(Perfil::OPERADOR, 'Operador')]);
+    }
+
+    private function perfil(string $slug, string $nome): int
+    {
+        $perfil = Perfil::firstOrCreate(['slug' => $slug], ['nome' => $nome]);
+        if ($perfil->wasRecentlyCreated) {
+            $perfil->permissoes()->sync(Permissao::pluck('id'));
+        }
+
+        return $perfil->id;
     }
 
     public function unverified(): static

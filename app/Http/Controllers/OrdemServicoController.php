@@ -15,6 +15,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -23,10 +24,12 @@ class OrdemServicoController extends Controller
 {
     public function index(Request $request): View
     {
-        $filtros = $request->validate(['q' => ['nullable', 'string', 'max:255'], 'status_id' => ['nullable', 'integer', 'exists:statuses,id'], 'prazo' => ['nullable', Rule::in(['abertas', 'hoje', 'proximas', 'atrasadas'])], 'pagamento' => ['nullable', Rule::in(['pendente', 'quitado'])]]);
+        $filtros = $request->validate(['cliente_id' => ['nullable', 'integer', 'exists:clientes,id'], 'q' => ['nullable', 'string', 'max:255'], 'status_id' => ['nullable', 'integer', 'exists:statuses,id'], 'prazo' => ['nullable', Rule::in(['abertas', 'hoje', 'proximas', 'atrasadas'])], 'pagamento' => ['nullable', Rule::in(['pendente', 'quitado'])]]);
+        $clienteFiltro = isset($filtros['cliente_id']) ? Cliente::findOrFail($filtros['cliente_id']) : null;
         $ordens = OrdemServico::with('status')->withCount('itens')->when($filtros['q'] ?? null, fn ($query, $q) => $query->where(function ($query) use ($q) {
             $query->where('nome', 'like', '%'.$q.'%')->orWhereHas('cliente', fn ($cliente) => $cliente->where('nome', 'like', '%'.$q.'%'))->orWhere('descricao', 'like', '%'.$q.'%')->orWhereHas('itens', fn ($itens) => $itens->where('descricao', 'like', '%'.$q.'%'))->orWhere('id', ltrim($q, '#0'));
         }))
+            ->when($clienteFiltro, fn ($query, $cliente) => $query->where('cliente_id', $cliente->id))
             ->when($filtros['status_id'] ?? null, fn ($query, $id) => $query->where('status_id', $id))->prazo($filtros['prazo'] ?? null)
             ->when($filtros['pagamento'] ?? null, function ($query, $pagamento) {
                 $operador = $pagamento === 'quitado' ? '>=' : '<';
@@ -34,7 +37,7 @@ class OrdemServicoController extends Controller
             })
             ->when($filtros['prazo'] ?? null, fn ($query) => $query->orderBy('data_entrega'))->latest()->paginate(15)->withQueryString();
 
-        return view('ordens.index', ['ordens' => $ordens, 'statuses' => Status::orderBy('posicao')->get()]);
+        return view('ordens.index', ['ordens' => $ordens, 'statuses' => Status::orderBy('posicao')->get(), 'clienteFiltro' => $clienteFiltro]);
     }
 
     public function create(Request $request): View
@@ -149,6 +152,8 @@ class OrdemServicoController extends Controller
 
     public function acao(OrdemServico $ordem, string $acao, MensagensWhatsApp $mensagens): View
     {
+        Gate::authorize(['status' => 'ordens.status', 'whatsapp' => 'ordens.visualizar', 'pagamentos' => 'pagamentos.visualizar'][$acao]);
+
         return view('ordens.acao', [...$this->dadosDetalhes($ordem, $mensagens), 'acao' => $acao]);
     }
 
@@ -158,8 +163,8 @@ class OrdemServicoController extends Controller
         $url = route('documentos.show', ['token' => $ordem->token, 'formato' => 'docx']);
         $pdfUrl = route('documentos.show', ['token' => $ordem->token, 'formato' => 'pdf']);
         $modelosWhatsApp = $mensagens->modelos($ordem);
-        $whatsappUrl = $mensagens->url($ordem->telefone, $modelosWhatsApp['pedido']);
-        $telefoneWhatsApp = $mensagens->telefone($ordem->telefone);
+        $whatsappUrl = $mensagens->url((string) $ordem->telefone, $modelosWhatsApp['pedido']);
+        $telefoneWhatsApp = $mensagens->telefone((string) $ordem->telefone);
         $statuses = Status::orderBy('posicao')->get();
 
         return compact('ordem', 'url', 'pdfUrl', 'whatsappUrl', 'modelosWhatsApp', 'telefoneWhatsApp', 'statuses');

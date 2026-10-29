@@ -9,7 +9,7 @@
             const abrir = editor.querySelector('[data-whatsapp-abrir]');
             const feedback = editor.querySelector('[data-whatsapp-feedback]');
             const atualizar = () => {
-                abrir.href = `https://wa.me/${editor.dataset.telefone}?text=${encodeURIComponent(mensagem.value)}`;
+                if (abrir) abrir.href = `https://wa.me/${editor.dataset.telefone}?text=${encodeURIComponent(mensagem.value)}`;
             };
             tipo.addEventListener('change', () => { mensagem.value = modelos[tipo.value] || ''; atualizar(); });
             mensagem.addEventListener('input', atualizar);

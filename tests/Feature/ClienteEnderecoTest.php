@@ -14,6 +14,46 @@ class ClienteEnderecoTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_cliente_pode_ser_cadastrado_sem_telefone_e_remover_telefone_na_edicao(): void
+    {
+        $this->actingAs(User::factory()->operador()->create());
+
+        $this->post(route('clientes.store'), ['nome' => 'Cliente sem telefone'])->assertSessionHasNoErrors();
+        $cliente = Cliente::firstOrFail();
+        $this->assertNull($cliente->telefone);
+
+        $this->postJson(route('clientes.store'), ['nome' => 'Cadastro rápido sem telefone', 'telefone' => ''])
+            ->assertCreated()->assertJsonPath('telefone', null);
+
+        $cliente->update(['telefone' => '11999991234']);
+        $this->putJson(route('clientes.update', $cliente), ['nome' => $cliente->nome, 'telefone' => ''])
+            ->assertOk()->assertJsonPath('telefone', null);
+        $this->assertNull($cliente->fresh()->telefone);
+    }
+
+    public function test_cliente_sem_telefone_pode_criar_editar_e_visualizar_os(): void
+    {
+        $this->actingAs(User::factory()->operador()->create());
+        $cliente = Cliente::factory()->create(['telefone' => null]);
+        $dados = [
+            'cliente_id' => $cliente->id,
+            'status_id' => Status::where('slug', 'orcamento')->value('id'),
+            'itens' => [['tipo' => 'unitario', 'descricao' => 'Impressão', 'quantidade' => 1, 'valor_unitario' => 10]],
+        ];
+
+        $this->post(route('ordens.store'), $dados)->assertSessionHasNoErrors();
+        $ordem = OrdemServico::firstOrFail();
+        $this->assertNull($ordem->telefone);
+        $this->put(route('ordens.update', $ordem), $dados)->assertSessionHasNoErrors();
+        $this->assertNull($ordem->fresh()->telefone);
+        $this->get(route('ordens.success', $ordem->token))->assertOk();
+        $this->get(route('ordens.acao', [$ordem, 'whatsapp']))->assertOk()
+            ->assertSee('Cliente sem telefone cadastrado.')
+            ->assertDontSee('data-whatsapp-abrir', false);
+        $this->get(route('documentos.show', ['token' => $ordem->token, 'formato' => 'pdf']))
+            ->assertOk()->assertHeader('Content-Type', 'application/pdf');
+    }
+
     public function test_numero_e_cadastrado_editado_e_retornado_nos_dados_do_cliente(): void
     {
         $this->actingAs(User::factory()->operador()->create());

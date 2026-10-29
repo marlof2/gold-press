@@ -19,27 +19,47 @@
 <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
 <button class="sidebar-backdrop" id="sidebar-backdrop" aria-label="Fechar menu" hidden></button>
 <aside class="sidebar" id="sidebar" aria-label="Menu principal">
-<a class="brand" href="{{ route('dashboard') }}"><span class="logo">G<span>✦</span></span><span>GOLD PRESS<small>GESTÃO DA GRÁFICA</small></span></a>
+<div class="sidebar-header">
+<a class="brand" href="{{ auth()->user()->can('dashboard.visualizar') ? route('dashboard') : route('account') }}"><span class="logo">G<span>✦</span></span><span>GOLD PRESS<small>GESTÃO DA GRÁFICA</small></span></a>
 <button class="icon-button sidebar-close" id="sidebar-close" aria-label="Fechar menu"><x-icon name="close"/></button>
-<div class="sidebar-label">ESPAÇO DE TRABALHO</div>
-<nav class="main-nav">
-<a href="{{ route('dashboard') }}" @class(['active'=>request()->routeIs('dashboard')]) @if(request()->routeIs('dashboard')) aria-current="page" @endif><x-icon name="grid"/>Visão geral</a>
-<a href="{{ route('ordens.index') }}" @class(['active'=>request()->routeIs('ordens.*')]) @if(request()->routeIs('ordens.*')) aria-current="page" @endif><x-icon name="orders"/>Ordens de serviço</a>
-<a href="{{ route('clientes.index') }}" @class(['active'=>request()->routeIs('clientes.*')]) @if(request()->routeIs('clientes.*')) aria-current="page" @endif><x-icon name="users"/>Clientes</a>
-@can('administrar')<a href="{{ route('statuses.index') }}" @class(['active'=>request()->routeIs('statuses.*')]) @if(request()->routeIs('statuses.*')) aria-current="page" @endif><x-icon name="status"/>Status das ordens</a>@endcan
-</nav>
-@can('administrar')<div class="sidebar-label">ADMINISTRAÇÃO</div>
-<nav class="main-nav">
-<a href="{{ route('usuarios.index') }}" @class(['active'=>request()->routeIs('usuarios.*')]) @if(request()->routeIs('usuarios.*')) aria-current="page" @endif><x-icon name="shield"/>Usuários</a>
-<a href="{{ route('empresa.edit') }}" @class(['active'=>request()->routeIs('empresa.*')]) @if(request()->routeIs('empresa.*')) aria-current="page" @endif><x-icon name="building"/>Empresa</a>
-<a href="{{ route('produtos.index') }}" @class(['active'=>request()->routeIs('produtos.*')]) @if(request()->routeIs('produtos.*')) aria-current="page" @endif><x-icon name="box"/>Produtos</a>
-</nav>
+</div>
+<div class="sidebar-content">
+@can('dashboard.visualizar')
+<nav class="main-nav" aria-label="Visão geral"><a href="{{ route('dashboard') }}" @class(['active'=>request()->routeIs('dashboard')]) @if(request()->routeIs('dashboard')) aria-current="page" @endif><x-icon name="grid"/><span>Visão geral</span></a></nav>
 @endcan
-<div class="sidebar-bottom"><a class="account-link" href="{{ route('account') }}"><span class="avatar">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span><strong>{{ auth()->user()->name }}</strong><small>Minha conta e senha</small></span></a><form method="POST" action="{{ route('logout') }}">@csrf<button class="logout-button" type="submit"><x-icon name="logout"/>Sair da conta</button></form></div>
+@canany(['ordens.visualizar', 'clientes.visualizar', 'produtos.visualizar'])
+<section class="sidebar-group" aria-labelledby="menu-operacao"><h2 class="sidebar-label" id="menu-operacao">Operação</h2><nav class="main-nav" aria-label="Operação">
+@can('ordens.visualizar')<a href="{{ route('ordens.index') }}" @class(['active'=>request()->routeIs('ordens.*')]) @if(request()->routeIs('ordens.*')) aria-current="page" @endif><x-icon name="orders"/><span>Ordens de serviço</span></a>@endcan
+@can('clientes.visualizar')<a href="{{ route('clientes.index') }}" @class(['active'=>request()->routeIs('clientes.*')]) @if(request()->routeIs('clientes.*')) aria-current="page" @endif><x-icon name="users"/><span>Clientes</span></a>@endcan
+@can('produtos.visualizar')<a href="{{ route('produtos.index') }}" @class(['active'=>request()->routeIs('produtos.*')]) @if(request()->routeIs('produtos.*')) aria-current="page" @endif><x-icon name="box"/><span>Produtos</span></a>@endcan
+</nav></section>
+@endcanany
+@can('faturamento.visualizar')
+<section class="sidebar-group" aria-labelledby="menu-financeiro"><h2 class="sidebar-label" id="menu-financeiro">Financeiro</h2><nav class="main-nav" aria-label="Financeiro"><a href="{{ route('faturamento.index') }}" @class(['active'=>request()->routeIs('faturamento.*')]) @if(request()->routeIs('faturamento.*')) aria-current="page" @endif><x-icon name="payment"/><span>Faturamento</span></a></nav></section>
+@endcan
+@canany(['statuses.visualizar', 'empresa.visualizar'])
+<section class="sidebar-group" aria-labelledby="menu-configuracoes"><h2 class="sidebar-label" id="menu-configuracoes">Configurações</h2><nav class="main-nav" aria-label="Configurações">
+@can('statuses.visualizar')<a href="{{ route('statuses.index') }}" @class(['active'=>request()->routeIs('statuses.*')]) @if(request()->routeIs('statuses.*')) aria-current="page" @endif><x-icon name="status"/><span>Status das ordens</span></a>@endcan
+@can('empresa.visualizar')<a href="{{ route('empresa.edit') }}" @class(['active'=>request()->routeIs('empresa.*')]) @if(request()->routeIs('empresa.*')) aria-current="page" @endif><x-icon name="building"/><span>Dados da empresa</span></a>@endcan
+</nav></section>
+@endcanany
+@canany(['usuarios.visualizar', 'perfis.visualizar'])
+<section class="sidebar-group" aria-labelledby="menu-acessos"><h2 class="sidebar-label" id="menu-acessos">Equipe e acesso</h2><nav class="main-nav" aria-label="Equipe e acesso">
+@can('usuarios.visualizar')<a href="{{ route('usuarios.index') }}" @class(['active'=>request()->routeIs('usuarios.*')]) @if(request()->routeIs('usuarios.*')) aria-current="page" @endif><x-icon name="user"/><span>Usuários</span></a>@endcan
+@can('perfis.visualizar')<a href="{{ route('perfis.index') }}" @class(['active'=>request()->routeIs('perfis.*')]) @if(request()->routeIs('perfis.*')) aria-current="page" @endif><x-icon name="shield"/><span>Perfis e permissões</span></a>@endcan
+</nav></section>
+@endcanany
+</div>
+<div class="sidebar-bottom">
+<a class="account-link" href="{{ route('account') }}" @if(request()->routeIs('account*')) aria-current="page" @endif><span class="avatar">{{ mb_strtoupper(mb_substr(auth()->user()->name,0,1)) }}</span><span><strong>{{ auth()->user()->name }}</strong><small>{{ auth()->user()->perfil?->nome ?? 'Minha conta' }}</small></span><x-icon name="arrow"/></a>
+<form method="POST" action="{{ route('logout') }}">@csrf<button class="logout-button" type="submit"><x-icon name="logout"/>Sair da conta</button></form>
+</div>
 </aside>
 <div class="app-shell"><header class="topbar"><div class="topbar-left"><button class="icon-button menu-toggle" id="menu-toggle" aria-label="Abrir menu" aria-expanded="false" aria-controls="sidebar"><x-icon name="menu"/></button><span class="topbar-section">@yield('title', 'Visão geral')</span><span class="topbar-divider">/</span><span class="topbar-caption">Seu espaço de produção</span></div><div class="topbar-actions"><form class="topbar-search" action="{{ route('ordens.index') }}" role="search"><x-icon name="search"/><input type="search" name="q" placeholder="Buscar OS ou cliente" aria-label="Buscar OS ou cliente" maxlength="255"></form></div></header>
 <main id="conteudo" tabindex="-1"><x-feedback/>@yield('content')</main><footer>Gold Press <span>•</span> Organização em cada impressão</footer></div>
-<nav class="mobile-nav" aria-label="Atalhos"><a href="{{ route('dashboard') }}" @class(['active'=>request()->routeIs('dashboard')])><x-icon name="grid"/><span>Início</span></a><a href="{{ route('ordens.index') }}" @class(['active'=>request()->routeIs('ordens.*')])><x-icon name="orders"/><span>Ordens</span></a><a href="{{ route('clientes.index') }}" @class(['active'=>request()->routeIs('clientes.*')])><x-icon name="users"/><span>Clientes</span></a></nav>
+<nav class="mobile-nav" aria-label="Atalhos">@can('dashboard.visualizar')<a href="{{ route('dashboard') }}" @class(['active'=>request()->routeIs('dashboard')])><x-icon name="grid"/><span>Início</span></a>@endcan
+@can('ordens.visualizar')<a href="{{ route('ordens.index') }}" @class(['active'=>request()->routeIs('ordens.*')])><x-icon name="orders"/><span>Ordens</span></a>@endcan
+@can('clientes.visualizar')<a href="{{ route('clientes.index') }}" @class(['active'=>request()->routeIs('clientes.*')])><x-icon name="users"/><span>Clientes</span></a>@endcan</nav>
 @else
 <main class="guest-main" id="conteudo">@yield('content')</main>
 @endauth
@@ -47,5 +67,6 @@
 <dialog id="os-acao-dialog" class="osf-dialog osf-action-dialog" aria-labelledby="os-acao-titulo"><div data-os-acao-conteudo></div></dialog>
 @endauth
 @stack('scripts')
+<script src="{{ asset('js/cliente-tipo.js') }}?v={{ filemtime(public_path('js/cliente-tipo.js')) }}" defer></script>
 </body>
 </html>

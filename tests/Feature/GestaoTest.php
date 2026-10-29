@@ -132,7 +132,9 @@ class GestaoTest extends TestCase
         $os = $this->novaOrdem();
         $xml = $this->documentoXml($os);
         $this->assertStringNotContainsString('Gráfica Nova', $xml);
-        $this->assertStringContainsString('CNPJ 11.222.333/0001-44', $xml);
+        $documento = new \DOMDocument;
+        $documento->loadXML($xml);
+        $this->assertStringContainsString('CNPJ: 11.222.333/0001-44', $documento->textContent);
     }
 
     public function test_crud_de_cliente_validacao_e_escape(): void

@@ -44,7 +44,7 @@ class MensagensWhatsApp
         if ($saldo <= 0) {
             $financeiro .= "\nPagamento quitado. Obrigado!";
         } elseif ($pago > 0) {
-            $financeiro .= "\nJá pago: ".$moeda($pago)."\n*Saldo a pagar: ".$moeda($saldo).'*';
+            $financeiro .= "\nJá pago: ".$moeda($pago)."\n*Valor a pagar: ".$moeda($saldo).'*';
         } else {
             $financeiro .= "\nPagamento pendente.";
         }

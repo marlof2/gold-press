@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Empresa;
 use App\Models\OrdemServico;
 use App\Models\Perfil;
+use App\Models\Permissao;
 use App\Models\Status;
 use App\Models\User;
 use App\Services\GerarDocumentoOrdemServico;
@@ -89,7 +90,7 @@ class MelhoriasOperacionaisTest extends TestCase
         $ordem = $this->criar(['sinal' => 30]);
         $rota = route('ordens.success', $ordem->token);
         $this->get($rota)->assertOk()
-            ->assertSeeInOrder(['Valor pago', 'R$ 30,00', 'Saldo restante', 'R$ 70,00'])
+            ->assertSeeInOrder(['Valor pago', 'R$ 30,00', 'Valor a pagar', 'R$ 70,00'])
             ->assertDontSee('id="pagamento-valor"', false);
         $dados = ['chave' => (string) Str::uuid(), 'valor' => '20,00', 'data_pagamento' => today()->toDateString(), 'forma' => 'pix'];
 
@@ -97,10 +98,10 @@ class MelhoriasOperacionaisTest extends TestCase
             ->assertJsonPath('valor_pago', 50);
 
         $this->assertSame(50.0, $ordem->fresh()->saldoRestante());
-        $this->get($rota)->assertOk()->assertSeeInOrder(['Valor pago', 'R$ 50,00', 'Saldo restante', 'R$ 50,00']);
+        $this->get($rota)->assertOk()->assertSeeInOrder(['Valor pago', 'R$ 50,00', 'Valor a pagar', 'R$ 50,00']);
         $this->get(route('ordens.acao', [$ordem, 'pagamentos']))->assertOk()
             ->assertSee('data-os-acao-sucesso', false)
-            ->assertSeeInOrder(['Recebido', 'R$ 50,00', 'Saldo restante', 'R$ 50,00'])
+            ->assertSeeInOrder(['Recebido', 'R$ 50,00', 'Valor a pagar', 'R$ 50,00'])
             ->assertSee('Registrar pagamento');
         $pagamento = $ordem->pagamentos()->where('chave', $dados['chave'])->firstOrFail();
 
@@ -109,7 +110,7 @@ class MelhoriasOperacionaisTest extends TestCase
 
         $this->assertNotNull($pagamento->fresh()->estornado_em);
         $this->assertSame(70.0, $ordem->fresh()->saldoRestante());
-        $this->get($rota)->assertOk()->assertSeeInOrder(['Valor pago', 'R$ 30,00', 'Saldo restante', 'R$ 70,00']);
+        $this->get($rota)->assertOk()->assertSeeInOrder(['Valor pago', 'R$ 30,00', 'Valor a pagar', 'R$ 70,00']);
     }
 
     public function test_rejeita_pagamento_excedente_e_sinal_em_edicao(): void
@@ -134,12 +135,14 @@ class MelhoriasOperacionaisTest extends TestCase
         $this->assertSame(0.0, $ordem->fresh()->saldoRestante());
     }
 
-    public function test_estorno_exige_admin_e_preserva_historico(): void
+    public function test_estorno_exige_permissao_e_preserva_historico(): void
     {
         $this->entrar(false);
         $ordem = $this->criar(['sinal' => 30]);
         $pagamento = $ordem->pagamentos()->firstOrFail();
         $rota = route('ordens.pagamentos.estornar', [$ordem, $pagamento]);
+        auth()->user()->perfil->permissoes()->detach(Permissao::where('slug', 'pagamentos.estornar')->value('id'));
+        auth()->user()->unsetRelation('perfil');
         $this->patch($rota, ['motivo_estorno' => 'Lançamento duplicado'])->assertForbidden();
         $this->assertNull($pagamento->fresh()->estornado_em);
 
@@ -255,12 +258,14 @@ class MelhoriasOperacionaisTest extends TestCase
         $this->assertStringContainsString('pronto para retirada', $modelos['retirada']);
     }
 
-    public function test_permissoes_restringem_administracao_e_exclusao_para_operador(): void
+    public function test_permissoes_revogadas_restringem_administracao_e_exclusao(): void
     {
         $operador = $this->entrar(false);
         $admin = User::factory()->admin()->create();
-        $this->assertFalse(Gate::forUser($operador)->allows('administrar'));
-        $this->assertTrue(Gate::forUser($admin)->allows('administrar'));
+        $operador->perfil->permissoes()->detach(Permissao::whereIn('grupo', ['usuarios', 'empresa', 'statuses', 'produtos'])->orWhere('slug', 'ordens.excluir')->pluck('id'));
+        $operador->unsetRelation('perfil');
+        $this->assertFalse(Gate::forUser($operador)->allows('usuarios.visualizar'));
+        $this->assertTrue(Gate::forUser($admin)->allows('usuarios.visualizar'));
         foreach (['/usuarios', '/usuarios/create', '/empresa', '/statuses', '/produtos'] as $url) {
             $this->get($url)->assertForbidden();
         }
@@ -412,12 +417,12 @@ class MelhoriasOperacionaisTest extends TestCase
         $ordem->pagamentos()->create(['chave' => (string) Str::uuid(), 'valor' => 30, 'data_pagamento' => today(), 'forma' => 'pix']);
         $parcial = $mensagens->modelos($ordem->fresh());
         $this->assertStringContainsString('Já pago: R$ 30,00', $parcial['retirada']);
-        $this->assertStringContainsString('Saldo a pagar: R$ 70,00', $parcial['retirada']);
+        $this->assertStringContainsString('Valor a pagar: R$ 70,00', $parcial['retirada']);
 
         $ordem->pagamentos()->create(['chave' => (string) Str::uuid(), 'valor' => 70, 'data_pagamento' => today(), 'forma' => 'pix']);
         $quitado = $mensagens->modelos($ordem->fresh());
         $this->assertStringContainsString('Pagamento quitado.', $quitado['envio']);
-        $this->assertStringNotContainsString('Saldo a pagar', $quitado['envio']);
+        $this->assertStringNotContainsString('Valor a pagar', $quitado['envio']);
         $this->get(route('ordens.success', $ordem->token))->assertOk()->assertSee('Quitada')->assertSee('Ver pagamentos');
     }
 

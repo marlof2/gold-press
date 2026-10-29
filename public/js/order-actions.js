@@ -36,11 +36,9 @@
             menu.style.top = `${rect.bottom + 6}px`;
         }
     }
-    document.querySelectorAll('[data-os-menu]').forEach((menu) => {
-        menu.addEventListener('beforetoggle', (evento) => {
-            if (evento.newState === 'open') posicionarMenu(menu);
-        });
-    });
+    document.addEventListener('beforetoggle', (evento) => {
+        if (evento.newState === 'open' && evento.target.matches('[data-os-menu]')) posicionarMenu(evento.target);
+    }, true);
 
     function mostrarErro(mensagem) {
         let erro = conteudo.querySelector('[data-os-acao-erros]');
@@ -75,6 +73,7 @@
         titulo.textContent = 'Carregando…';
         conteudo.append(titulo);
         dialog.setAttribute('aria-busy', 'true');
+        dialog.classList.remove('osf-history-dialog');
         if (!dialog.open) dialog.showModal();
         try {
             const resposta = await fetch(url, { signal: atual.signal, headers: { Accept: 'text/html' } });
@@ -83,6 +82,7 @@
             const html = await resposta.text();
             if (requisicao !== atual) return;
             conteudo.innerHTML = html;
+            dialog.classList.toggle('osf-history-dialog', Boolean(conteudo.querySelector('[data-cliente-historico]')));
             conteudo.querySelectorAll('[data-mask]').forEach((campo) => window.GPMasks?.aplicar(campo));
             window.GPWhatsApp?.inicializar(conteudo);
             const sucesso = conteudo.querySelector('[data-os-acao-sucesso]');
@@ -98,12 +98,12 @@
         }
     }
     document.addEventListener('click', (evento) => {
-        const acao = evento.target.closest('[data-os-acao]');
+        const acao = evento.target.closest('[data-os-acao], [data-cliente-historico] .pagination a');
         if (acao) {
             evento.preventDefault();
             if (salvando) return;
             const menu = acao.closest('[data-os-menu]');
-            gatilho = menu ? document.querySelector(`[popovertarget="${CSS.escape(menu.id)}"]`) : acao;
+            if (!dialog.contains(acao)) gatilho = menu ? document.querySelector(`[popovertarget="${CSS.escape(menu.id)}"]`) : acao;
             document.querySelectorAll('[data-os-menu]:popover-open').forEach((menu) => menu.hidePopover());
             abrir(acao.href);
         }

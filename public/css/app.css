@@ -9,3 +9,31 @@
 .product-form-status .checkbox{margin:0}
 .product-form-status .hint{margin:4px 0 0}
 @media(max-width:640px){.product-form-fields{grid-template-columns:minmax(0,1fr)}}
+
+/* Navegação lateral */
+.sidebar{padding:0;overflow:hidden;background:linear-gradient(165deg,#263f33 0%,#1d3329 100%)}
+.sidebar-header{position:relative;flex-shrink:0;padding:26px 20px 22px;border-bottom:1px solid #ffffff10}
+.sidebar .brand{font-size:14px;letter-spacing:1.6px;gap:12px;width:fit-content}
+.sidebar .brand small{font-size:8px;letter-spacing:1.5px;margin-top:5px}
+.sidebar .logo{width:36px;height:40px;font-size:31px;border-color:#bda56c;border-radius:4px}
+.sidebar .logo>span{background:#263f33}
+.sidebar-content{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;display:flex;flex-direction:column;gap:22px;padding:20px 12px 24px;scrollbar-width:thin;scrollbar-color:#5b6e60 transparent}
+.sidebar-group{flex-shrink:0}
+.sidebar .sidebar-label{margin:0 12px 8px;font:600 9px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;letter-spacing:1.6px;text-transform:uppercase;color:#92a69a}
+.sidebar .main-nav{gap:4px;flex-shrink:0}
+.sidebar .main-nav>a{position:relative;gap:11px;min-height:44px;padding:11px 13px;border:1px solid transparent;border-radius:8px;color:#c1d0c6;font-size:12px;transition:background .15s,color .15s,border-color .15s}
+.sidebar .main-nav>a:hover{background:#ffffff09;color:#fff}
+.sidebar .main-nav>a.active{background:#ffffff0c;border-color:#c9ac7033;color:#f1dba5}
+.sidebar .main-nav>a.active:before{content:"";position:absolute;top:12px;bottom:12px;left:0;width:3px;border-radius:0 3px 3px 0;background:#d1b477}
+.sidebar .main-nav .icon{width:18px;height:18px;opacity:.85}.sidebar .main-nav>a.active .icon{opacity:1}
+.sidebar-bottom{flex-shrink:0;margin-top:0;padding:14px 16px 10px;border-top:1px solid #ffffff12;background:#10251d25}
+.sidebar .account-link{padding:9px 7px;border-radius:8px;gap:10px}
+.sidebar .account-link:hover,.sidebar .account-link[aria-current=page]{background:#ffffff08}
+.sidebar .account-link>span:nth-child(2){flex:1;min-width:0}
+.sidebar .account-link strong{font-size:12px;color:#e8eee9}.sidebar .account-link small{font-size:10px;color:#9fb1a4;margin-top:3px;display:block}
+.sidebar .account-link>.icon{width:15px;height:15px;color:#91a697}
+.sidebar .avatar{width:34px;height:34px;background:#c9ac701c;border:1px solid #c9ac7033;color:#e0c38b;font-size:12px}
+.sidebar .logout-button{justify-content:center;gap:8px;min-height:36px;margin-top:4px;padding:7px 10px;border-radius:6px;color:#9fb1a4;font-size:11px}.sidebar .logout-button:hover{background:#ffffff08;color:#f1dba5}
+@media(min-width:1100px){:root{--sidebar:264px}}
+@media(max-width:1099px){.sidebar-header{padding:22px 20px 18px}.sidebar .sidebar-close{top:10px;right:5px}.sidebar-content{gap:18px;padding-top:16px}}
+@media(prefers-reduced-motion:reduce){.sidebar .main-nav>a{transition:none}}

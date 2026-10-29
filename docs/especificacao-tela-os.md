@@ -194,7 +194,7 @@ Route::get('/ordens/{token}/sucesso', [OrdemServicoController::class, 'success']
 - Cabeçalho: logo e dados da empresa à esquerda; título, número e status da OS à direita.
 - Cliente: nome, documento, telefone e endereço à esquerda; emissão, entrega e aprovação à direita. Responsável da gráfica abaixo.
 - Itens: Produto / serviço | Qtd. | Medidas | Preço | Subtotal. Código, referência, formato, cores e vias aparecem junto à descrição. Cabeçalho repetido nas páginas seguintes.
-- Resumo financeiro à direita: subtotal, desconto, total, valor pago e saldo restante.
+- Resumo financeiro à direita: subtotal, desconto, total, valor pago e valor a pagar.
 - Condições de pagamento, observações e serviço realizado abaixo, quando preenchidos.
 - Rodapé com identificação da OS, data de geração e paginação. Documentos extensos podem ocupar mais de uma página.
 - `DadosDocumentoOrdemServico` concentra os campos e a formatação compartilhados pelos dois geradores.

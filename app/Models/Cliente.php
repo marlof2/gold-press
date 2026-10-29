@@ -10,9 +10,14 @@ class Cliente extends Model
 {
     use HasFactory;
 
-    public const DADOS_OS = ['nome', 'documento', 'endereco', 'numero_endereco', 'cidade', 'bairro', 'uf', 'cep', 'telefone'];
+    public const DADOS_OS = ['nome', 'tipo_pessoa', 'documento', 'endereco', 'numero_endereco', 'cidade', 'bairro', 'uf', 'cep', 'telefone'];
 
     protected $fillable = [...self::DADOS_OS, 'email', 'observacoes'];
+
+    public function documentoRotulo(): string
+    {
+        return ($this->tipo_pessoa ?? (strlen(preg_replace('/\D/', '', (string) $this->documento)) === 14 ? 'PJ' : 'PF')) === 'PJ' ? 'CNPJ' : 'CPF';
+    }
 
     public function ordens(): HasMany
     {

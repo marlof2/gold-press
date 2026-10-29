@@ -13,7 +13,7 @@
 <label class="" for="email">E-mail<input id="email" name="email" type="email" value="{{ old('email',$empresa->email) }}" maxlength="255"></label>
 <label class="wide" for="site">Site<input id="site" name="site" type="text" value="{{ old('site',$empresa->site) }}" maxlength="255"></label>
 </div>
-<div class="form-actions"><button class="button fit" type="submit">Salvar dados <x-icon name="check"/></button></div>
+@can('empresa.editar')<div class="form-actions"><button class="button fit" type="submit">Salvar dados <x-icon name="check"/></button></div>@endcan
 </form>
 </section>
 @endsection

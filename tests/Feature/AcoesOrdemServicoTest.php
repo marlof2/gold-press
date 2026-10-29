@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Cliente;
 use App\Models\OrdemServico;
+use App\Models\Permissao;
 use App\Models\Status;
 use App\Models\User;
 use App\Services\SalvarOrdemServico;
@@ -64,7 +65,7 @@ class AcoesOrdemServicoTest extends TestCase
     {
         $this->actingAs(User::factory()->operador()->create());
         $ordem = OrdemServico::factory()->create();
-        foreach (['status' => 'Novo status', 'whatsapp' => 'Mensagem pronta para envio', 'pagamentos' => 'Saldo restante'] as $acao => $texto) {
+        foreach (['status' => 'Novo status', 'whatsapp' => 'Mensagem pronta para envio', 'pagamentos' => 'Valor a pagar'] as $acao => $texto) {
             $this->get(route('ordens.acao', [$ordem, $acao]))->assertOk()->assertSee($texto)->assertSee('data-os-acao-fechar', false)->assertDontSee('<html', false);
         }
         $this->get('/ordens/'.$ordem->id.'/acoes/desconhecida')->assertNotFound();
@@ -103,7 +104,7 @@ class AcoesOrdemServicoTest extends TestCase
         $this->assertSame($ordem->status_id, $ordem->fresh()->status_id);
     }
 
-    public function test_estorno_por_modal_exige_admin_e_retorna_confirmacao_json(): void
+    public function test_estorno_por_modal_exige_permissao_e_retorna_confirmacao_json(): void
     {
         $this->actingAs(User::factory()->operador()->create());
         Storage::fake('public');
@@ -111,6 +112,8 @@ class AcoesOrdemServicoTest extends TestCase
         $ordem = OrdemServico::firstOrFail();
         $pagamento = $ordem->pagamentos()->firstOrFail();
         $rota = route('ordens.pagamentos.estornar', [$ordem, $pagamento]);
+        auth()->user()->perfil->permissoes()->detach(Permissao::where('slug', 'pagamentos.estornar')->value('id'));
+        auth()->user()->unsetRelation('perfil');
         $this->patchJson($rota, ['motivo_estorno' => 'Lançamento duplicado'])->assertForbidden();
         $this->assertNull($pagamento->fresh()->estornado_em);
 

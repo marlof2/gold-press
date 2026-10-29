@@ -41,7 +41,15 @@ class ClienteController extends Controller
 
     public function show(Cliente $cliente): View
     {
-        return view('clientes.show', ['cliente' => $cliente, 'ordens' => $cliente->ordens()->with('status')->latest()->paginate(10)]);
+        return view('clientes.show', ['cliente' => $cliente->loadCount('ordens')]);
+    }
+
+    public function historico(Cliente $cliente): View
+    {
+        return view('clientes.historico', [
+            'cliente' => $cliente,
+            'ordens' => $cliente->ordens()->with('status')->withCount('itens')->latest()->latest('id')->paginate(10),
+        ]);
     }
 
     public function edit(Request $request, Cliente $cliente): View|JsonResponse

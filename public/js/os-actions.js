@@ -80,13 +80,14 @@
             const dados = await resposta.json().catch(() => ({}));
             if (!resposta.ok || !dados.id) throw new Error(erroDaResposta(dados, 'Não foi possível carregar o cadastro. Tente novamente.'));
             if (atual.signal.aborted) return;
-            ['nome', 'documento', 'telefone', 'email', 'cep', 'endereco', 'numero_endereco', 'bairro', 'cidade', 'uf', 'observacoes'].forEach((nome) => {
+            ['nome', 'tipo_pessoa', 'documento', 'telefone', 'email', 'cep', 'endereco', 'numero_endereco', 'bairro', 'cidade', 'uf', 'observacoes'].forEach((nome) => {
                 const campo = cadastro.elements.namedItem(nome);
                 campo.value = dados[nome] ?? '';
                 if (nome === 'telefone') campo.value = window.GPMasks.maskTelefone(campo.value);
                 if (nome === 'documento') campo.value = window.GPMasks.maskCpfCnpj(campo.value);
                 if (nome === 'cep') campo.value = window.GPMasks.maskCep(campo.value);
             });
+            cadastro.querySelector('[data-tipo-pessoa]')?.dispatchEvent(new Event('change'));
             carregado = true;
         } catch (erro) {
             if (erro.name === 'AbortError') return;

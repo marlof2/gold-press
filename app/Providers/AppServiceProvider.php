@@ -22,7 +22,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        Gate::define('administrar', fn (User $user): bool => $user->isAdmin());
+        foreach (config('permissoes') as $grupo => $dados) {
+            foreach (array_keys($dados['acoes']) as $acao) {
+                $permissao = $grupo.'.'.$acao;
+                Gate::define($permissao, fn (User $user): bool => $user->temPermissao($permissao));
+            }
+        }
         if (str_starts_with((string) config('app.url'), 'https://') || request()->header('X-Forwarded-Proto') === 'https') {
             URL::forceScheme('https');
         }

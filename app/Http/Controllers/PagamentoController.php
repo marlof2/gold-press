@@ -37,7 +37,7 @@ class PagamentoController extends Controller
                 return;
             }
             if ((int) round((float) $dados['valor'] * 100) > (int) round($ordem->saldoRestante() * 100)) {
-                throw ValidationException::withMessages(['valor' => 'O pagamento não pode ultrapassar o saldo restante da OS.']);
+                throw ValidationException::withMessages(['valor' => 'O pagamento não pode ultrapassar o valor a pagar da OS.']);
             }
             $ordem->pagamentos()->create([...$dados, 'user_id' => $request->user()->id]);
         });

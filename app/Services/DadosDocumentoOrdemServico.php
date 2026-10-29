@@ -27,6 +27,10 @@ class DadosDocumentoOrdemServico
             'logo_path' => is_file($logo) ? $logo : null,
             'logo' => is_file($logo) ? 'data:image/png;base64,'.base64_encode(file_get_contents($logo)) : null,
             'empresa' => $empresa->nome,
+            'empresa_documento' => $empresa->documento,
+            'empresa_telefone' => $empresa->telefone,
+            'empresa_endereco' => preg_replace('/\s+/u', ' ', (string) $empresa->endereco),
+            'empresa_contatos' => collect([$empresa->email, $empresa->site])->filter()->join(' · '),
             'empresa_linhas' => array_values(array_filter([
                 $empresa->documento ? 'CNPJ '.$empresa->documento : null,
                 $empresa->endereco, $empresa->telefone, $empresa->email, $empresa->site,
@@ -34,6 +38,7 @@ class DadosDocumentoOrdemServico
             'status' => $ordem->status?->nome ?: $ordem->situacao,
             'cliente' => $ordem->nome,
             'documento' => $ordem->documento ?: '—',
+            'documento_rotulo' => $ordem->documentoRotulo(),
             'telefone' => $ordem->telefone ?: '—',
             'endereco' => collect([$ordem->endereco, $ordem->numero_endereco, $ordem->bairro, $ordem->cidade, $ordem->uf, $ordem->cep])->filter()->join(' · ') ?: 'Não informado',
             'prazos' => $prazos,
@@ -55,7 +60,7 @@ class DadosDocumentoOrdemServico
                 'Desconto' => $this->moeda($ordem->desconto),
                 'Total da OS' => $this->moeda($ordem->valor_total_final),
                 'Valor pago' => $this->moeda($ordem->valorPago()),
-                'Saldo restante' => $this->moeda($ordem->saldoRestante()),
+                'Valor a pagar' => $this->moeda($ordem->saldoRestante()),
             ],
             'notas' => array_filter([
                 'Condições de pagamento' => $ordem->condicoes_pagamento,

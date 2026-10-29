@@ -37,6 +37,11 @@ class User extends Authenticatable
         return $this->belongsTo(Perfil::class);
     }
 
+    public function temPermissao(string $permissao): bool
+    {
+        return $this->perfil?->permissoes->contains('slug', $permissao) ?? false;
+    }
+
     public function isAdmin(): bool
     {
         return $this->perfil?->isAdmin() ?? false;

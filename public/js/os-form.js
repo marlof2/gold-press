@@ -55,7 +55,7 @@
     function renomear(root, de, para) {
         root.querySelectorAll('*').forEach((el) => {
             [...el.attributes].forEach((attr) => {
-                if (['name', 'id', 'for', 'data-target', 'aria-describedby'].includes(attr.name)) {
+                if (['name', 'id', 'for', 'data-target', 'aria-describedby', 'aria-controls'].includes(attr.name)) {
                     el.setAttribute(attr.name, attr.value.replaceAll(`[${de}]`, `[${para}]`).replaceAll(`-${de}-`, `-${para}-`));
                 }
             });
@@ -107,12 +107,13 @@
         });
     }
 
-    function selecionarProduto(row) {
+    function selecionarProduto(row, selecionado = null) {
         const campo = row.querySelector('[data-produto]');
         const oculto = row.querySelector('[data-produto-id]');
         if (!campo || !oculto) return;
 
-        const opcao = [...document.querySelectorAll('#produtos-lista option')].find((item) => item.value.trim().toLowerCase() === campo.value.trim().toLowerCase());
+        const correspondencias = [...document.querySelectorAll('#produtos-lista option')].filter((item) => item.value.trim().toLowerCase() === campo.value.trim().toLowerCase());
+        const opcao = selecionado || (correspondencias.length === 1 ? correspondencias[0] : null);
         if (!opcao) {
             oculto.value = '';
             return;
@@ -136,6 +137,113 @@
         }
 
         calcular();
+    }
+
+    function inicializarBuscaProduto(row) {
+        const root = row.querySelector('[data-produto-combo]');
+        const input = root?.querySelector('[data-produto]');
+        const lista = root?.querySelector('[data-produto-opcoes]');
+        const abrir = root?.querySelector('[data-produto-abrir]');
+        const feedback = root?.querySelector('[data-produto-feedback]');
+        if (!input || !lista || !abrir) return;
+
+        input.removeAttribute('list');
+        input.classList.add('osf-combobox-input');
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-autocomplete', 'list');
+        input.setAttribute('aria-controls', lista.id);
+        abrir.hidden = false;
+        const normalizar = (valor) => String(valor).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+        let resultados = [];
+        let ativo = -1;
+
+        function fechar() {
+            lista.hidden = true;
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
+        }
+        function destacar(indice) {
+            ativo = indice;
+            [...lista.querySelectorAll('[role="option"]')].forEach((item, i) => item.setAttribute('aria-selected', String(i === ativo)));
+            const item = lista.querySelectorAll('[role="option"]')[ativo];
+            if (item) {
+                input.setAttribute('aria-activedescendant', item.id);
+                item.scrollIntoView({ block: 'nearest' });
+            } else {
+                input.removeAttribute('aria-activedescendant');
+            }
+        }
+        function escolher(opcao) {
+            if (!opcao) return;
+            input.value = opcao.value;
+            selecionarProduto(row, opcao);
+            sujo = true;
+            input.focus();
+            fechar();
+        }
+        function mostrar(termo = '') {
+            resultados = [...document.querySelectorAll('#produtos-lista option')].filter((opcao) => normalizar(opcao.value).includes(normalizar(termo)));
+            lista.replaceChildren();
+            resultados.forEach((opcao, indice) => {
+                const item = document.createElement('li');
+                item.id = `${lista.id}-${indice}`;
+                item.setAttribute('role', 'option');
+                const nome = document.createElement('strong');
+                nome.textContent = opcao.value;
+                const detalhe = document.createElement('small');
+                const porArea = opcao.dataset.tipo === 'm2';
+                detalhe.textContent = `${porArea ? 'Metro quadrado' : 'Unitário'} · ${money.format(Number(porArea ? opcao.dataset.valorM2 : opcao.dataset.valorUnitario))} / ${porArea ? 'm²' : 'un'}`;
+                item.append(nome, detalhe);
+                item.addEventListener('pointerdown', (evento) => evento.preventDefault());
+                item.addEventListener('click', () => escolher(opcao));
+                item.addEventListener('pointermove', () => destacar(indice));
+                lista.append(item);
+            });
+            if (!resultados.length) {
+                const vazio = document.createElement('li');
+                vazio.className = 'osf-combobox-empty';
+                vazio.textContent = 'Nenhum produto encontrado. Você pode manter a descrição digitada.';
+                lista.append(vazio);
+            }
+            lista.hidden = false;
+            input.setAttribute('aria-expanded', 'true');
+            if (feedback) feedback.textContent = `${resultados.length} produtos encontrados.`;
+            destacar(-1);
+        }
+        input.addEventListener('focus', () => mostrar());
+        input.addEventListener('click', () => { if (lista.hidden) mostrar(); });
+        input.addEventListener('input', () => {
+            selecionarProduto(row);
+            mostrar(input.value);
+        });
+        input.addEventListener('blur', fechar);
+        input.addEventListener('keydown', (evento) => {
+            if (evento.key === 'ArrowDown' || evento.key === 'ArrowUp') {
+                evento.preventDefault();
+                if (lista.hidden) mostrar(input.value);
+                if (resultados.length) {
+                    const proximo = ativo < 0 ? (evento.key === 'ArrowUp' ? resultados.length - 1 : 0) : (ativo + (evento.key === 'ArrowDown' ? 1 : -1) + resultados.length) % resultados.length;
+                    destacar(proximo);
+                }
+            } else if (evento.key === 'Enter' && !lista.hidden && ativo >= 0) {
+                evento.preventDefault();
+                escolher(resultados[ativo]);
+            } else if (evento.key === 'Escape' && !lista.hidden) {
+                evento.preventDefault();
+                evento.stopPropagation();
+                fechar();
+            } else if (evento.key === 'Tab') {
+                fechar();
+            }
+        });
+        abrir.addEventListener('pointerdown', (evento) => evento.preventDefault());
+        abrir.addEventListener('click', () => {
+            const aberta = !lista.hidden;
+            input.focus();
+            if (aberta) fechar(); else mostrar();
+        });
+        lista.replaceChildren();
+        fechar();
     }
 
     function calcular() {
@@ -217,9 +325,7 @@
                 calcular();
             });
         });
-        const produto = row.querySelector('[data-produto]');
-        produto?.addEventListener('change', () => selecionarProduto(row));
-        produto?.addEventListener('input', () => selecionarProduto(row));
+        inicializarBuscaProduto(row);
         row.querySelector('[data-item-remover]')?.addEventListener('click', () => removerItem(row));
         row.querySelector('[data-item-duplicar]')?.addEventListener('click', () => duplicarItem(row));
         alternarTipo(row);
@@ -296,7 +402,7 @@
         if (telefone) telefone.textContent = dados.telefone ? M.maskTelefone(dados.telefone) : '—';
         if (documento) documento.textContent = dados.documento ? M.maskCpfCnpj(dados.documento) : '—';
         const documentoLabel = document.getElementById('cliente-documento-label');
-        if (documentoLabel) documentoLabel.textContent = dados.documento ? (M.onlyDigits(dados.documento).length === 14 ? 'CNPJ' : 'CPF') : 'CPF / CNPJ';
+        if (documentoLabel) documentoLabel.textContent = dados.tipo_pessoa ? (dados.tipo_pessoa === 'PJ' ? 'CNPJ' : 'CPF') : (dados.documento ? (M.onlyDigits(dados.documento).length === 14 ? 'CNPJ' : 'CPF') : 'CPF / CNPJ');
         if (preencherEndereco) {
             valorDe('endereco', dados.endereco);
             valorDe('bairro', dados.bairro);
