@@ -35,9 +35,9 @@ class PermissoesPerfilTest extends TestCase
         $migracao->down();
         $migracao->up();
 
-        $this->assertDatabaseCount('permissoes', 31);
+        $this->assertDatabaseCount('permissoes', collect(config('permissoes'))->sum(fn (array $grupo): int => count($grupo['acoes'])));
         foreach ([$admin->perfil_id, $operador->perfil_id, $outro->id] as $id) {
-            $this->assertSame(31, Perfil::findOrFail($id)->permissoes()->count());
+            $this->assertSame(collect(config('permissoes'))->sum(fn (array $grupo): int => count($grupo['acoes'])), Perfil::findOrFail($id)->permissoes()->count());
         }
         $this->actingAs($operador->fresh());
         $this->get(route('usuarios.index'))->assertOk();
@@ -50,7 +50,7 @@ class PermissoesPerfilTest extends TestCase
         $this->revogar($user, 'produtos.excluir');
         $this->seed([PermissaoSeeder::class, PerfilSeeder::class]);
         $this->seed([PermissaoSeeder::class, PerfilSeeder::class]);
-        $this->assertDatabaseCount('permissoes', 31);
+        $this->assertDatabaseCount('permissoes', collect(config('permissoes'))->sum(fn (array $grupo): int => count($grupo['acoes'])));
         $this->assertFalse($user->fresh()->can('produtos.excluir'));
         $this->assertTrue($user->fresh()->can('produtos.visualizar'));
     }
@@ -85,6 +85,9 @@ class PermissoesPerfilTest extends TestCase
             ['GET', '/ordens/1/acoes/pagamentos', 'pagamentos.visualizar'],
             ['POST', '/ordens/1/pagamentos', 'pagamentos.criar'],
             ['PATCH', '/ordens/1/pagamentos/1/estornar', 'pagamentos.estornar'],
+            ['GET', '/mensagens-whatsapp', 'mensagens-whatsapp.visualizar'],
+            ['POST', '/mensagens-whatsapp', 'mensagens-whatsapp.criar'],
+            ['PUT', '/mensagens-whatsapp/1', 'mensagens-whatsapp.editar'],
             ['GET', '/empresa', 'empresa.visualizar'],
             ['PUT', '/empresa', 'empresa.editar'],
             ['GET', '/perfis', 'perfis.visualizar'],
@@ -131,7 +134,7 @@ class PermissoesPerfilTest extends TestCase
         $user = User::factory()->admin()->create();
         $this->actingAs($user);
         $this->put(route('perfis.update', $user->perfil), ['permissoes' => []])->assertSessionHasErrors('permissoes');
-        $this->assertSame(31, $user->perfil->permissoes()->count());
+        $this->assertSame(collect(config('permissoes'))->sum(fn (array $grupo): int => count($grupo['acoes'])), $user->perfil->permissoes()->count());
     }
 
     public function test_valida_ids_e_exige_login_na_gestao_de_perfis(): void
@@ -141,7 +144,7 @@ class PermissoesPerfilTest extends TestCase
         $this->put(route('perfis.update', $user->perfil), ['permissoes' => []])->assertRedirect(route('login'));
         $this->actingAs($user);
         $this->putJson(route('perfis.update', $user->perfil), ['permissoes' => [999999]])->assertUnprocessable()->assertJsonValidationErrors('permissoes.0');
-        $this->assertSame(31, $user->perfil->permissoes()->count());
+        $this->assertSame(collect(config('permissoes'))->sum(fn (array $grupo): int => count($grupo['acoes'])), $user->perfil->permissoes()->count());
     }
 
     public function test_nao_pode_trocar_perfil_do_usuario_sem_permissao_especifica(): void

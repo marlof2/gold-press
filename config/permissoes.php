@@ -10,5 +10,6 @@ return [
     'statuses' => ['nome' => 'Status', 'acoes' => ['visualizar' => 'Visualizar status', 'criar' => 'Cadastrar status', 'editar' => 'Editar status', 'excluir' => 'Excluir status']],
     'usuarios' => ['nome' => 'Usuários', 'acoes' => ['visualizar' => 'Visualizar usuários', 'criar' => 'Cadastrar usuários', 'editar' => 'Editar usuários', 'excluir' => 'Excluir usuários', 'atribuir_perfil' => 'Definir perfil dos usuários']],
     'empresa' => ['nome' => 'Empresa', 'acoes' => ['visualizar' => 'Visualizar empresa', 'editar' => 'Editar empresa']],
+    'mensagens-whatsapp' => ['nome' => 'Mensagens do WhatsApp', 'acoes' => ['visualizar' => 'Visualizar mensagens', 'criar' => 'Cadastrar mensagens', 'editar' => 'Editar mensagens']],
     'perfis' => ['nome' => 'Perfis e permissões', 'acoes' => ['visualizar' => 'Visualizar perfis', 'editar' => 'Alterar permissões dos perfis']],
 ];

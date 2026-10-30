@@ -6,6 +6,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DocumentoOrdemController;
 use App\Http\Controllers\EmpresaController;
 use App\Http\Controllers\FaturamentoController;
+use App\Http\Controllers\ModeloWhatsAppController;
 use App\Http\Controllers\OrdemServicoController;
 use App\Http\Controllers\PagamentoController;
 use App\Http\Controllers\PerfilController;
@@ -47,6 +48,10 @@ Route::middleware(['auth', 'single.session'])->group(function () {
     Route::get('/perfis', [PerfilController::class, 'index'])->middleware('can:perfis.visualizar')->name('perfis.index');
     Route::get('/perfis/{perfil}/edit', [PerfilController::class, 'edit'])->middleware('can:update,perfil')->name('perfis.edit');
     Route::put('/perfis/{perfil}', [PerfilController::class, 'update'])->middleware('can:update,perfil')->name('perfis.update');
+    Route::resource('mensagens-whatsapp', ModeloWhatsAppController::class)->only(['index', 'create', 'store', 'edit', 'update'])->parameters(['mensagens-whatsapp' => 'modelo'])
+        ->middlewareFor(['index'], 'can:mensagens-whatsapp.visualizar')
+        ->middlewareFor(['create', 'store'], 'can:mensagens-whatsapp.criar')
+        ->middlewareFor(['edit', 'update'], 'can:mensagens-whatsapp.editar');
     Route::get('/empresa', [EmpresaController::class, 'edit'])->middleware('can:empresa.visualizar')->name('empresa.edit');
     Route::put('/empresa', [EmpresaController::class, 'update'])->middleware('can:empresa.editar')->name('empresa.update');
     Route::resource('usuarios', UserController::class)->except('show')->parameters(['usuarios' => 'usuario'])

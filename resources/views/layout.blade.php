@@ -37,9 +37,10 @@
 @can('faturamento.visualizar')
 <section class="sidebar-group" aria-labelledby="menu-financeiro"><h2 class="sidebar-label" id="menu-financeiro">Financeiro</h2><nav class="main-nav" aria-label="Financeiro"><a href="{{ route('faturamento.index') }}" @class(['active'=>request()->routeIs('faturamento.*')]) @if(request()->routeIs('faturamento.*')) aria-current="page" @endif><x-icon name="payment"/><span>Faturamento</span></a></nav></section>
 @endcan
-@canany(['statuses.visualizar', 'empresa.visualizar'])
+@canany(['statuses.visualizar', 'empresa.visualizar', 'mensagens-whatsapp.visualizar'])
 <section class="sidebar-group" aria-labelledby="menu-configuracoes"><h2 class="sidebar-label" id="menu-configuracoes">Configurações</h2><nav class="main-nav" aria-label="Configurações">
 @can('statuses.visualizar')<a href="{{ route('statuses.index') }}" @class(['active'=>request()->routeIs('statuses.*')]) @if(request()->routeIs('statuses.*')) aria-current="page" @endif><x-icon name="status"/><span>Status das ordens</span></a>@endcan
+@can('mensagens-whatsapp.visualizar')<a href="{{ route('mensagens-whatsapp.index') }}" @class(['active'=>request()->routeIs('mensagens-whatsapp.*')]) @if(request()->routeIs('mensagens-whatsapp.*')) aria-current="page" @endif><x-icon name="chat"/><span>Mensagens do WhatsApp</span></a>@endcan
 @can('empresa.visualizar')<a href="{{ route('empresa.edit') }}" @class(['active'=>request()->routeIs('empresa.*')]) @if(request()->routeIs('empresa.*')) aria-current="page" @endif><x-icon name="building"/><span>Dados da empresa</span></a>@endcan
 </nav></section>
 @endcanany

@@ -3,10 +3,59 @@
 namespace App\Services;
 
 use App\Models\Empresa;
+use App\Models\ModeloWhatsApp;
 use App\Models\OrdemServico;
 
 class MensagensWhatsApp
 {
+    public const VARIAVEIS = [
+        'cliente' => 'Nome do cliente',
+        'empresa' => 'Nome da empresa',
+        'numero' => 'Número da OS',
+        'itens' => 'Lista de itens (até 8; demais no PDF)',
+        'total' => 'Valor total',
+        'pago' => 'Valor já pago',
+        'saldo' => 'Saldo a pagar',
+        'entrega' => 'Data de entrega ou “A combinar”',
+        'documento' => 'Link do PDF atualizado',
+        'endereco_empresa' => 'Endereço da empresa',
+        'abertura' => 'Saudação com cliente e empresa',
+        'financeiro' => 'Resumo do pagamento',
+        'prazo' => 'Frase com a previsão de entrega',
+        'retirada' => 'Frase com o local de retirada',
+        'fecho' => 'Encerramento com link do PDF',
+    ];
+
+    /** @return array<string, string> */
+    public function exemplo(): array
+    {
+        $documento = 'https://exemplo.com/documentos/pedido.pdf';
+
+        return [
+            'cliente' => 'Maria Silva',
+            'empresa' => 'Gold Press',
+            'numero' => '000123',
+            'itens' => '• Cartões de visita — 500 un',
+            'total' => 'R$ 150,00',
+            'pago' => 'R$ 50,00',
+            'saldo' => 'R$ 100,00',
+            'entrega' => '15/11/2026',
+            'documento' => $documento,
+            'endereco_empresa' => 'Rua das Flores, 123 — Centro',
+            'abertura' => 'Olá, Maria Silva! Aqui é da Gold Press.',
+            'financeiro' => "*Total do pedido: R$ 150,00*\nJá pago: R$ 50,00\n*Valor a pagar: R$ 100,00*",
+            'prazo' => "\nPrevisão de entrega: 15/11/2026",
+            'retirada' => "\nLocal de retirada: Rua das Flores, 123 — Centro",
+            'fecho' => "\n\nDetalhes e PDF atualizado:\n".$documento."\n\nSe precisar de ajuda, fale com a gente por aqui.",
+        ];
+    }
+
+    /** @return array<string, string> */
+    public function nomes(): array
+    {
+        return ModeloWhatsApp::orderBy('posicao')->orderBy('id')->pluck('nome', 'chave')->all();
+    }
+
     public function telefone(string $telefone): string
     {
         $digitos = preg_replace('/\D/', '', $telefone);
@@ -52,11 +101,25 @@ class MensagensWhatsApp
         $retirada = $empresa->endereco ? "\nLocal de retirada: ".$empresa->endereco : '';
         $prazo = $ordem->data_entrega ? "\nPrevisão de entrega: ".$ordem->data_entrega->format('d/m/Y') : "\nEntrega a combinar.";
 
-        return [
-            'pedido' => $abertura."\n\n*Ordem de serviço #".$numero."*\n".$itens."\n\n".$financeiro.$prazo."\nConfira os itens e nos avise se precisar de algum ajuste.".$fecho,
-            'producao' => $abertura."\n\nSeu pedido #".$numero.' está em produção. Avisaremos assim que estiver pronto!'.$prazo.$fecho,
-            'retirada' => $abertura."\n\nSeu pedido #".$numero.' está pronto para retirada!'.$retirada."\n\n".$financeiro."\nPodemos combinar a retirada por aqui?".$fecho,
-            'envio' => $abertura."\n\nSeu pedido #".$numero." está pronto para envio!\nPodemos confirmar o endereço e combinar a entrega por aqui?\n\n".$financeiro.$fecho,
+        $variaveis = [
+            '{cliente}' => $ordem->nome,
+            '{empresa}' => $empresa->nome,
+            '{numero}' => $numero,
+            '{itens}' => $itens,
+            '{total}' => $moeda((float) $ordem->valor_total_final),
+            '{pago}' => $moeda($pago),
+            '{saldo}' => $moeda($saldo),
+            '{entrega}' => $ordem->data_entrega?->format('d/m/Y') ?? 'A combinar',
+            '{documento}' => $documento,
+            '{endereco_empresa}' => $empresa->endereco ?? '',
+            '{abertura}' => $abertura,
+            '{financeiro}' => $financeiro,
+            '{prazo}' => $prazo,
+            '{retirada}' => $retirada,
+            '{fecho}' => $fecho,
         ];
+
+        return ModeloWhatsApp::orderBy('posicao')->orderBy('id')->get()
+            ->mapWithKeys(fn (ModeloWhatsApp $modelo): array => [$modelo->chave => strtr($modelo->conteudo, $variaveis)])->all();
     }
 }

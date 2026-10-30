@@ -163,10 +163,11 @@ class OrdemServicoController extends Controller
         $url = route('documentos.show', ['token' => $ordem->token, 'formato' => 'docx']);
         $pdfUrl = route('documentos.show', ['token' => $ordem->token, 'formato' => 'pdf']);
         $modelosWhatsApp = $mensagens->modelos($ordem);
+        $nomesWhatsApp = $mensagens->nomes();
         $whatsappUrl = $mensagens->url((string) $ordem->telefone, $modelosWhatsApp['pedido']);
         $telefoneWhatsApp = $mensagens->telefone((string) $ordem->telefone);
         $statuses = Status::orderBy('posicao')->get();
 
-        return compact('ordem', 'url', 'pdfUrl', 'whatsappUrl', 'modelosWhatsApp', 'telefoneWhatsApp', 'statuses');
+        return compact('ordem', 'url', 'pdfUrl', 'whatsappUrl', 'modelosWhatsApp', 'nomesWhatsApp', 'telefoneWhatsApp', 'statuses');
     }
 }
